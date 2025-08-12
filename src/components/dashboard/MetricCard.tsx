@@ -58,19 +58,19 @@ const MetricCard: React.FC<MetricCardProps> = ({
       className
     )}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="text-sm font-medium text-muted-foreground truncate pr-2">
           {title}
         </CardTitle>
-        <div className={cn("p-2 rounded-lg", getIconStyles())}>
+        <div className={cn("p-2 rounded-lg flex-shrink-0", getIconStyles())}>
           <Icon className="h-4 w-4" />
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-1">
         <div className="flex items-baseline justify-between">
-          <div>
-            <div className="text-2xl font-bold">{value}</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xl lg:text-2xl font-bold truncate">{value}</div>
             {subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 truncate">
                 {subtitle}
               </p>
             )}
@@ -78,7 +78,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
           
           {trend && (
             <div className={cn(
-              "flex items-center text-xs font-medium",
+              "flex items-center text-xs font-medium ml-2 flex-shrink-0",
               trend.isPositive ? "text-success" : "text-destructive"
             )}>
               <span className="mr-1">

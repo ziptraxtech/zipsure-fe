@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginForm from '@/components/auth/LoginForm';
-import DashboardLayout from '@/components/layout/DashboardLayout';
+import MobileDashboardLayout from '@/components/layout/MobileDashboardLayout';
 import SuperAdminDashboard from '@/components/dashboard/SuperAdminDashboard';
 import AdminDashboard from '@/components/dashboard/AdminDashboard';
 import AllocatorDashboard from '@/components/dashboard/AllocatorDashboard';
@@ -47,9 +47,9 @@ const Index = () => {
   };
 
   return (
-    <DashboardLayout>
+    <MobileDashboardLayout>
       {renderDashboard()}
-    </DashboardLayout>
+    </MobileDashboardLayout>
   );
 };
 

@@ -93,28 +93,30 @@ const AllocatorDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header - Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Job Allocation</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold">Job Allocation</h1>
           <p className="text-muted-foreground">
             Manage and assign jobs to available riders
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm">
             <Eye className="h-4 w-4 mr-2" />
-            Live Map
+            <span className="hidden sm:inline">Live Map</span>
+            <span className="sm:hidden">Map</span>
           </Button>
-          <Button>
+          <Button size="sm">
             <Plus className="h-4 w-4 mr-2" />
-            New Job
+            <span className="hidden sm:inline">New Job</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Metrics Grid - Responsive */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric, index) => (
           <MetricCard key={index} {...metric} />
         ))}

@@ -81,28 +81,30 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header - Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Organization Dashboard</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold">Organization Dashboard</h1>
           <p className="text-muted-foreground">
             Logistics Corp - Fleet Management Overview
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm">
             <Eye className="h-4 w-4 mr-2" />
-            View Reports
+            <span className="hidden sm:inline">View Reports</span>
+            <span className="sm:hidden">Reports</span>
           </Button>
-          <Button>
+          <Button size="sm">
             <Plus className="h-4 w-4 mr-2" />
-            Add Vehicle
+            <span className="hidden sm:inline">Add Vehicle</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Metrics Grid - Responsive */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric, index) => (
           <MetricCard key={index} {...metric} />
         ))}

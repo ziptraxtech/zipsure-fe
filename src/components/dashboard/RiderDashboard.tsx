@@ -86,21 +86,21 @@ const RiderDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header - Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">My Dashboard</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold">My Dashboard</h1>
           <p className="text-muted-foreground">
             Mike Johnson • Currently Available
           </p>
         </div>
-        <Badge variant="outline" className="text-success border-success">
+        <Badge variant="outline" className="text-success border-success w-fit">
           Available
         </Badge>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Metrics Grid - Responsive */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric, index) => (
           <MetricCard key={index} {...metric} />
         ))}
