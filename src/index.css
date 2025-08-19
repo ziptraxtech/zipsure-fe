@@ -16,11 +16,11 @@
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 16%;
 
-    /* Brand Colors - Professional Blue Fleet Theme */
-    --primary: 217 91% 60%;
+    /* Brand Colors - Custom Orange-Red Theme */
+    --primary: 10 100% 63%; /* #FF5941 */
     --primary-foreground: 0 0% 100%;
-    --primary-light: 217 91% 70%;
-    --primary-dark: 217 91% 50%;
+    --primary-light: 10 100% 73%;
+    --primary-dark: 10 100% 53%;
 
     --secondary: 217 32% 96%;
     --secondary-foreground: 224 71% 16%;
@@ -42,47 +42,40 @@
     /* UI Elements */
     --border: 217 20% 90%;
     --input: 217 20% 95%;
-    --ring: 217 91% 60%;
+    --ring: 10 100% 63%;
 
     --radius: 0.75rem;
 
     /* Fleet-specific Colors */
-    --fleet-blue: 217 91% 60%;
+    --fleet-blue: 10 100% 63%; /* #FF5941 */
     --fleet-navy: 224 71% 16%;
     --fleet-gray: 215 16% 47%;
     --fleet-light: 217 32% 96%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 50%));
+    --gradient-primary: linear-gradient(135deg, hsl(10 100% 63%), hsl(34 99% 69%)); /* #FF5941 → #FEBB64 */
     --gradient-secondary: linear-gradient(135deg, hsl(217 32% 96%), hsl(217 20% 95%));
-    --gradient-hero: linear-gradient(135deg, hsl(224 71% 16%), hsl(217 91% 60%));
+    --gradient-hero: linear-gradient(135deg, hsl(10 100% 63%), hsl(34 99% 69%)); /* Updated hero to match */
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(217 32% 98%));
 
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(217 91% 60% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(217 91% 60% / 0.1), 0 2px 4px -1px hsl(217 91% 60% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(217 91% 60% / 0.1), 0 4px 6px -2px hsl(217 91% 60% / 0.05);
-    --shadow-fleet: 0 8px 32px hsl(217 91% 60% / 0.15);
+    --shadow-sm: 0 1px 2px 0 hsl(10 100% 63% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(10 100% 63% / 0.1), 0 2px 4px -1px hsl(10 100% 63% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(10 100% 63% / 0.1), 0 4px 6px -2px hsl(10 100% 63% / 0.05);
+    --shadow-fleet: 0 8px 32px hsl(10 100% 63% / 0.15);
 
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 10 100% 63%;
   }
 
   .dark {
@@ -95,7 +88,7 @@
     --popover: 224 71% 6%;
     --popover-foreground: 217 32% 96%;
 
-    --primary: 217 91% 60%;
+    --primary: 10 100% 63%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 224 71% 10%;
@@ -112,16 +105,16 @@
 
     --border: 224 71% 12%;
     --input: 224 71% 10%;
-    --ring: 217 91% 60%;
+    --ring: 10 100% 63%;
 
     --sidebar-background: 224 71% 4%;
     --sidebar-foreground: 217 32% 96%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 10 100% 63%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 224 71% 8%;
     --sidebar-accent-foreground: 217 32% 96%;
     --sidebar-border: 224 71% 12%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 10 100% 63%;
   }
 }
 

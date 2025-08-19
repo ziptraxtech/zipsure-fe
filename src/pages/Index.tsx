@@ -1,3 +1,4 @@
+// src/pages/Index.tsx
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginForm from '@/components/auth/LoginForm';
@@ -9,25 +10,22 @@ import RiderDashboard from '@/components/dashboard/RiderDashboard';
 import { Loader2 } from 'lucide-react';
 
 const Index = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading FleetOps...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!user) {
     return <LoginForm />;
   }
 
   const renderDashboard = () => {
-    switch (user.role) {
+    switch (user.role?.toLowerCase()) {
       case 'superadmin':
         return <SuperAdminDashboard />;
       case 'admin':
@@ -38,19 +36,17 @@ const Index = () => {
         return <RiderDashboard />;
       default:
         return (
-          <div className="text-center">
+          <div className="text-center p-4">
             <h1 className="text-2xl font-bold mb-4">Welcome to FleetOps</h1>
-            <p className="text-muted-foreground">Role not recognized. Please contact support.</p>
+            <p className="text-muted-foreground">
+              Role not recognized. Please contact support.
+            </p>
           </div>
         );
     }
   };
 
-  return (
-    <MobileDashboardLayout>
-      {renderDashboard()}
-    </MobileDashboardLayout>
-  );
+  return <MobileDashboardLayout>{renderDashboard()}</MobileDashboardLayout>;
 };
 
 export default Index;

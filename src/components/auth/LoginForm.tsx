@@ -1,33 +1,34 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Shield, Truck } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
+import zip from '@/assets/zip.png';
 
 const LoginForm = () => {
   const { login, isLoading } = useAuth();
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    try {
-      await login(credentials);
-    } catch (err) {
-      setError('Invalid email or password. Please try again.');
-    }
+
+    // 🔹 Just login and go to root
+    await login(credentials.email, credentials.password);
+    navigate('/');
   };
 
   const demoAccounts = [
-    { role: 'Super Admin', email: 'superadmin@fleet.com', password: 'password' },
-    { role: 'Admin', email: 'admin@logistics.com', password: 'password' },
-    { role: 'Allocator', email: 'allocator@logistics.com', password: 'password' },
-    { role: 'Rider', email: 'rider@logistics.com', password: 'password' }
+    { role: 'superadmin', email: 'superadmin@zipsure.ai', password: 'password123' },
+    { role: 'admin', email: 'admin@demologistics.com', password: 'password123' },
+    { role: 'allocator', email: 'allocator@demologistics.com', password: 'password123' },
+    { role: 'rider', email: 'rider1@demologistics.com', password: 'password123' }
   ];
 
   const fillDemo = (email: string, password: string) => {
@@ -39,14 +40,8 @@ const LoginForm = () => {
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="flex items-center justify-center space-x-2">
-            <div className="p-3 bg-primary rounded-xl">
-              <Truck className="h-8 w-8 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">FleetOps</h1>
-              <p className="text-sm text-muted-foreground">Fleet Management Platform</p>
-            </div>
+          <div className="flex justify-center">
+            <img src={zip} alt="Logo" className="w-300 h-48 object-contain" />
           </div>
         </div>
 

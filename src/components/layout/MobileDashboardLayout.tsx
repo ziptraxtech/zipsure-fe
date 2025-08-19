@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
-  Truck, 
+  DollarSign,
   Users, 
   BarChart3, 
   Settings, 
@@ -38,14 +38,22 @@ import {
   MapPin,
   ClipboardList
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import logo from '@/assets/logo.png';
 
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
-  activeTab?: string;
+}
+
+interface User {
+  role?: string;
+  name?: string;
+  avatar?: string;
+  organizationName?: string;
 }
 
 const AppSidebar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth() as { user: User | null; logout: () => void };
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
 
@@ -68,7 +76,8 @@ const AppSidebar = () => {
       case 'admin':
         return [
           ...baseItems,
-          { id: 'fleet', label: 'Fleet Management', icon: Truck, url: '/fleet' },
+          { id: 'subscriptions', label: 'Subscriptions', icon: DollarSign, url: '/forAdmin/subscriptions' },
+          { id: 'fleet', label: 'Fleet Management', icon: ClipboardList, url: '/fleet' },
           { id: 'users', label: 'Team Members', icon: Users, url: '/users' },
           { id: 'jobs', label: 'Job Overview', icon: ClipboardList, url: '/jobs' },
           { id: 'analytics', label: 'Analytics', icon: BarChart3, url: '/analytics' },
@@ -99,13 +108,15 @@ const AppSidebar = () => {
 
   const navigationItems = getNavigationItems();
 
-  const getRoleBadgeVariant = (role: string) => {
+  const getRoleBadgeVariant = (role: string = '') => {
     switch (role) {
       case 'superadmin': return 'default';
       case 'admin': return 'secondary';
-      case 'allocator': return 'outline';
-      case 'rider': return 'outline';
-      default: return 'outline';
+      case 'allocator':
+      case 'rider':
+        return 'outline';
+      default: 
+        return 'outline';
     }
   };
 
@@ -113,13 +124,12 @@ const AppSidebar = () => {
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary rounded-lg">
-            <Truck className="h-5 w-5 text-primary-foreground" />
+          <div className="p-1.5 rounded-lg">
+            <img src={logo} alt="Logo" className="h-10 w-10 object-contain" />
           </div>
           {!isCollapsed && (
             <div>
-              <h1 className="text-lg font-semibold">FleetOps</h1>
-              <p className="text-xs text-muted-foreground">Fleet Management</p>
+              <h1 className="text-lg font-semibold">Zipsure AI</h1>
             </div>
           )}
         </div>
@@ -127,19 +137,19 @@ const AppSidebar = () => {
 
       <SidebarContent>
         {/* User Info */}
-        {!isCollapsed && (
+        {!isCollapsed && user && (
           <SidebarGroup>
             <div className="flex items-center gap-3 px-2 py-2">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  {user?.avatar || user?.name?.substring(0, 2).toUpperCase()}
+                  {user?.name?.substring(0, 2).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.name}</p>
+                <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={getRoleBadgeVariant(user?.role || '')} className="text-xs">
-                    {user?.role}
+                  <Badge variant={getRoleBadgeVariant(user?.role)} className="text-xs">
+                    {user?.role || 'user'}
                   </Badge>
                 </div>
                 {user?.organizationName && (
@@ -159,14 +169,13 @@ const AppSidebar = () => {
             <SidebarMenu>
               {navigationItems.map((item) => {
                 const Icon = item.icon;
-                
                 return (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton asChild>
-                      <button className="w-full flex items-center gap-3">
+                      <Link to={item.url} className="w-full flex items-center gap-3">
                         <Icon className="h-4 w-4" />
                         <span>{item.label}</span>
-                      </button>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -206,7 +215,7 @@ const AppSidebar = () => {
 };
 
 const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children }) => {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: User | null };
 
   return (
     <SidebarProvider>
@@ -218,16 +227,16 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
             <SidebarTrigger className="-ml-1" />
             
             <div className="flex items-center gap-2 lg:hidden">
-              <div className="p-1.5 bg-primary rounded-md">
-                <Truck className="h-4 w-4 text-primary-foreground" />
+              <div className="p-1  rounded-md">
+                <img src={logo} alt="Logo" className="h-5 w-5 object-contain" />
               </div>
-              <span className="font-semibold text-sm">FleetOps</span>
+              <span className="font-semibold text-sm">Zipsure AI</span>
             </div>
             
             <div className="ml-auto flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {user?.avatar || user?.name?.substring(0, 2).toUpperCase()}
+                  {user?.name?.substring(0, 2).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
             </div>
