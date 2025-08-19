@@ -1,100 +1,141 @@
-import React from 'react';
-import MetricCard from './MetricCard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Building2, 
-  Users, 
-  Truck, 
-  DollarSign, 
-  TrendingUp, 
-  Activity,
-  Shield,
-  AlertCircle
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import jwtDecode from 'jwt-decode';
+import { Shield } from 'lucide-react';
+import MetricsSection from './forSuperadmin/MetricsSection';
+import OrganizationOverview from './forSuperadmin/OrganizationOverview';
 
-const SuperAdminDashboard = () => {
-  const metrics = [
-    {
-      title: "Total Organizations",
-      value: "47",
-      subtitle: "Active organizations",
-      icon: Building2,
-      trend: { value: 12, isPositive: true }
-    },
-    {
-      title: "Total Revenue",
-      value: "$124,580",
-      subtitle: "This month",
-      icon: DollarSign,
-      trend: { value: 8.5, isPositive: true },
-      variant: 'success' as const
-    },
-    {
-      title: "Active Users",
-      value: "2,847",
-      subtitle: "Across all orgs",
-      icon: Users,
-      trend: { value: 15, isPositive: true }
-    },
-    {
-      title: "Fleet Vehicles",
-      value: "1,234",
-      subtitle: "Total registered",
-      icon: Truck,
-      trend: { value: 6, isPositive: true }
+interface OverviewData {
+  totalOrganizations: number;
+  totalUsers: number;
+  totalVehicles: number;
+  totalJobs: number;
+  totalSubscriptions: number;
+  totalPayments: number;
+  totalRevenue: number;
+}
+
+interface TokenPayload {
+  role: string;
+  exp?: number;
+}
+
+interface Organization {
+  name: string;
+  status: string;
+  phone: string;
+  email: string;
+  gst: string;
+  address: string;
+}
+
+const GlobalDashboard: React.FC = () => {
+  const [overview, setOverview] = useState<OverviewData>({
+    totalOrganizations: 0,
+    totalUsers: 0,
+    totalVehicles: 0,
+    totalJobs: 0,
+    totalSubscriptions: 0,
+    totalPayments: 0,
+    totalRevenue: 0,
+  });
+
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
     }
-  ];
 
-  const organizations = [
-    { name: "Logistics Corp", plan: "Premium", users: 145, vehicles: 89, revenue: 2890, status: "active" },
-    { name: "Swift Delivery", plan: "Standard", users: 87, vehicles: 54, revenue: 1450, status: "active" },
-    { name: "FastTrack", plan: "Basic", users: 32, vehicles: 25, revenue: 890, status: "active" },
-    { name: "Metro Transport", plan: "Premium", users: 198, vehicles: 134, revenue: 3240, status: "pending" },
-    { name: "City Movers", plan: "Standard", users: 76, vehicles: 43, revenue: 1280, status: "active" }
-  ];
+    let intervalId: NodeJS.Timeout;
 
-  const recentActivity = [
-    { type: "new_org", message: "New organization 'QuickShip' registered", time: "2 hours ago" },
-    { type: "payment", message: "Payment received from Logistics Corp", time: "4 hours ago" },
-    { type: "upgrade", message: "Swift Delivery upgraded to Premium plan", time: "6 hours ago" },
-    { type: "alert", message: "System maintenance scheduled", time: "1 day ago" }
-  ];
+    const fetchData = async () => {
+      try {
+        const decoded = jwtDecode<TokenPayload>(token);
+        if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
+        if (decoded.role !== 'superadmin') {
+          navigate(`/${decoded.role}-dashboard`);
+          return;
+        }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="outline" className="text-success border-success">Active</Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="text-warning border-warning">Pending</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
+        await Promise.all([
+          fetchOverview(token),
+          fetchOrganizations(token)
+        ]);
+
+      } catch (error) {
+        console.error('Authentication error:', error);
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
+    };
+
+    fetchData();
+
+    // refresh data every 20 seconds
+    intervalId = setInterval(fetchData, 20000);
+
+    // cleanup interval on unmount
+    return () => clearInterval(intervalId);
+  }, [navigate]);
+
+  const fetchOverview = async (token: string) => {
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/analytics/superadmin', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (json.success && json.data?.overview) {
+        setOverview(json.data.overview);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
     }
   };
 
-  const getPlanBadge = (plan: string) => {
-    switch (plan) {
-      case 'Premium':
-        return <Badge className="bg-primary">Premium</Badge>;
-      case 'Standard':
-        return <Badge variant="secondary">Standard</Badge>;
-      case 'Basic':
-        return <Badge variant="outline">Basic</Badge>;
-      default:
-        return <Badge variant="outline">{plan}</Badge>;
+  const fetchOrganizations = async (token: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/organizations', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+
+      if (json.success && Array.isArray(json.data)) {
+        const formattedOrgs = json.data.map((org: any) => ({
+          name: org.name,
+          status: org.isActive ? 'active' : 'inactive',
+          phone: org.phone,
+          email: org.email,
+          gst: org.gstNumber,
+          address: [org.address, org.city, org.state, org.country].filter(Boolean).join(', ')
+        }));
+        setOrganizations(formattedOrgs);
+      } else {
+        console.error('Failed to fetch organizations:', json.message || 'Unknown error');
+      }
+    } catch (err) {
+      console.error('Error in fetchOrganizations:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header - Mobile Responsive */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold">Global Dashboard</h1>
-          <p className="text-muted-foreground">
-            System-wide overview and analytics
-          </p>
+          <p className="text-muted-foreground">System-wide overview and analytics</p>
         </div>
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-primary" />
@@ -102,114 +143,13 @@ const SuperAdminDashboard = () => {
         </div>
       </div>
 
-      {/* Metrics Grid - Responsive */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((metric, index) => (
-          <MetricCard key={index} {...metric} />
-        ))}
-      </div>
+      {/* Metrics Section */}
+      <MetricsSection overview={overview} />
 
-      {/* Organizations Table */}
-      <Card className="fleet-card-gradient">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Organizations Overview
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left p-2 font-medium">Organization</th>
-                  <th className="text-left p-2 font-medium">Plan</th>
-                  <th className="text-left p-2 font-medium">Users</th>
-                  <th className="text-left p-2 font-medium">Vehicles</th>
-                  <th className="text-left p-2 font-medium">Revenue</th>
-                  <th className="text-left p-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {organizations.map((org, index) => (
-                  <tr key={index} className="border-b border-border/50 hover:bg-muted/50 fleet-transition">
-                    <td className="p-2 font-medium">{org.name}</td>
-                    <td className="p-2">{getPlanBadge(org.plan)}</td>
-                    <td className="p-2">{org.users}</td>
-                    <td className="p-2">{org.vehicles}</td>
-                    <td className="p-2">${org.revenue.toLocaleString()}</td>
-                    <td className="p-2">{getStatusBadge(org.status)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Bottom Row */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Revenue Chart */}
-        <Card className="fleet-card-gradient">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Revenue Trends
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">January</span>
-                <span className="font-medium">$98,240</span>
-              </div>
-              <Progress value={78} className="h-2" />
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">February</span>
-                <span className="font-medium">$112,580</span>
-              </div>
-              <Progress value={89} className="h-2" />
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">March</span>
-                <span className="font-medium">$124,580</span>
-              </div>
-              <Progress value={100} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card className="fleet-card-gradient">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Recent Activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 fleet-transition">
-                  <div className="mt-1">
-                    {activity.type === 'alert' && <AlertCircle className="h-4 w-4 text-warning" />}
-                    {activity.type === 'payment' && <DollarSign className="h-4 w-4 text-success" />}
-                    {activity.type === 'new_org' && <Building2 className="h-4 w-4 text-primary" />}
-                    {activity.type === 'upgrade' && <TrendingUp className="h-4 w-4 text-primary" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm">{activity.message}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Organizations Section */}
+      <OrganizationOverview organizations={organizations} isLoading={isLoading} />
     </div>
   );
 };
 
-export default SuperAdminDashboard;
+export default GlobalDashboard;

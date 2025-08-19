@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
-  Truck, 
+  DollarSign,
   Users, 
   BarChart3, 
   Settings, 
@@ -20,20 +20,37 @@ import {
   Shield, 
   Building2,
   MapPin,
-  ClipboardList
+  ClipboardList,
+  LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import logo from '@/assets/logo.png';
+
+interface NavigationItem {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  url?: string;
+}
+
+interface User {
+  role?: string;
+  name?: string;
+  avatar?: string;
+  organizationName?: string;
+}
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  activeTab?: string;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, activeTab = 'dashboard' }) => {
-  const { user, logout } = useAuth();
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+  const { user, logout } = useAuth() as { user: User | null; logout: () => void };
+  const { toast } = useToast();
 
-  const getNavigationItems = () => {
-    const baseItems = [
+  const getNavigationItems = (): NavigationItem[] => {
+    const baseItems: NavigationItem[] = [
       { id: 'dashboard', label: 'Dashboard', icon: BarChart3 }
     ];
 
@@ -51,7 +68,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, activeTab =
       case 'admin':
         return [
           ...baseItems,
-          { id: 'fleet', label: 'Fleet Management', icon: Truck },
+          { id: 'subscriptions', label: 'Subscriptions', icon: DollarSign, url: '/subscriptions' },
+          { id: 'fleet', label: 'Fleet Management', icon: ClipboardList },
           { id: 'users', label: 'Team Members', icon: Users },
           { id: 'jobs', label: 'Job Overview', icon: ClipboardList },
           { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -82,13 +100,31 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, activeTab =
 
   const navigationItems = getNavigationItems();
 
-  const getRoleBadgeVariant = (role: string) => {
+  const getRoleBadgeVariant = (role: string = '') => {
     switch (role) {
       case 'superadmin': return 'default';
       case 'admin': return 'secondary';
-      case 'allocator': return 'outline';
-      case 'rider': return 'outline';
-      default: return 'outline';
+      case 'allocator':
+      case 'rider':
+        return 'outline';
+      default: 
+        return 'outline';
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "Signed out",
+      description: "You have been logged out successfully.",
+      duration: 5000,
+      className: "bg-red-500 text-white zindex-[100]"
+    });
+  };
+
+  const handleNavigation = (e: React.MouseEvent, url?: string) => {
+    if (!url) {
+      e.preventDefault();
     }
   };
 
@@ -98,44 +134,46 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, activeTab =
       <div className="fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border fleet-shadow">
         {/* Header */}
         <div className="flex items-center gap-3 p-6 border-b border-border">
-          <div className="p-2 bg-primary rounded-lg">
-            <Truck className="h-6 w-6 text-primary-foreground" />
+          <div className="p-1 bg-primary rounded-lg">
+            <img src={logo} alt="Logo" className="h-6 w-6 object-contain" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">FleetOps</h1>
-            <p className="text-xs text-muted-foreground">Fleet Management</p>
+            <h1 className="text-lg font-semibold">Zipsure AI</h1>
           </div>
         </div>
 
         {/* User Info */}
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {user?.avatar || user?.name?.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant={getRoleBadgeVariant(user?.role || '')} className="text-xs">
-                  {user?.role}
-                </Badge>
+        {user && (
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {user?.name?.substring(0, 2).toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant={getRoleBadgeVariant(user?.role)} className="text-xs">
+                    {user?.role || 'user'}
+                  </Badge>
+                </div>
+                {user?.organizationName && (
+                  <p className="text-xs text-muted-foreground truncate mt-1">
+                    {user.organizationName}
+                  </p>
+                )}
               </div>
-              {user?.organizationName && (
-                <p className="text-xs text-muted-foreground truncate mt-1">
-                  {user.organizationName}
-                </p>
-              )}
             </div>
           </div>
-        </div>
+        )}
 
         {/* Navigation */}
         <nav className="p-4 space-y-1">
           {navigationItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const isActive = window.location.pathname === `/${item.id}` || 
+                           (item.url && window.location.pathname.startsWith(item.url));
             
             return (
               <Button
@@ -145,9 +183,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, activeTab =
                   "w-full justify-start gap-3 h-10",
                   isActive && "bg-secondary/80"
                 )}
+                asChild={!!item.url}
+                onClick={(e) => !item.url && e.preventDefault()}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                {item.url ? (
+                  <a href={item.url}>
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </a>
+                ) : (
+                  <>
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </>
+                )}
               </Button>
             );
           })}
@@ -170,7 +219,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, activeTab =
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-destructive">
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out
               </DropdownMenuItem>

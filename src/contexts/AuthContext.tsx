@@ -1,140 +1,148 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, AuthState, LoginCredentials } from '@/types/auth';
+// src/contexts/AuthContext.tsx
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/ui/use-toast"; // Import toast hook
 
-interface AuthContextType extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<void>;
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  role: string;
+  organizationId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<string>; // returns role
   logout: () => void;
-  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-// Mock user data for demonstration
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'superadmin@fleet.com',
-    name: 'Super Admin',
-    role: 'superadmin',
-    avatar: 'SA',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '2',
-    email: 'admin@logistics.com',
-    name: 'John Smith',
-    role: 'admin',
-    organizationId: 'org1',
-    organizationName: 'Logistics Corp',
-    avatar: 'JS',
-    isActive: true,
-    createdAt: '2024-01-15T00:00:00Z'
-  },
-  {
-    id: '3',
-    email: 'allocator@logistics.com',
-    name: 'Sarah Wilson',
-    role: 'allocator',
-    organizationId: 'org1',
-    organizationName: 'Logistics Corp',
-    avatar: 'SW',
-    isActive: true,
-    createdAt: '2024-02-01T00:00:00Z'
-  },
-  {
-    id: '4',
-    email: 'rider@logistics.com',
-    name: 'Mike Johnson',
-    role: 'rider',
-    organizationId: 'org1',
-    organizationName: 'Logistics Corp',
-    avatar: 'MJ',
-    isActive: true,
-    createdAt: '2024-02-10T00:00:00Z'
-  }
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
+  const { toast } = useToast();
 
-  useEffect(() => {
-    // Check for stored authentication
-    const storedUser = localStorage.getItem('fleet-user');
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
-        setState({
-          user,
-          isAuthenticated: true,
-          isLoading: false
-        });
-      } catch (error) {
-        localStorage.removeItem('fleet-user');
-        setState(prev => ({ ...prev, isLoading: false }));
-      }
-    } else {
-      setState(prev => ({ ...prev, isLoading: false }));
+  const validateToken = useCallback(async (token: string) => {
+    try {
+      const res = await fetch("http://localhost:3000/api/v1/auth/login", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      return res.ok;
+    } catch (error) {
+      return false;
     }
   }, []);
 
-  const login = async (credentials: LoginCredentials): Promise<void> => {
-    setState(prev => ({ ...prev, isLoading: true }));
-    
-    // Mock authentication - in real app, this would be an API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const user = mockUsers.find(u => u.email === credentials.email);
-    
-    if (user && credentials.password === 'password') {
-      localStorage.setItem('fleet-user', JSON.stringify(user));
-      setState({
-        user,
-        isAuthenticated: true,
-        isLoading: false
+  const clearAuth = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+  }, []);
+
+  // Initialize auth state
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const storedUser = localStorage.getItem("user");
+        const storedToken = localStorage.getItem("token");
+        
+        if (storedToken && storedToken !== "undefined" && storedUser) {
+          const isValid = await validateToken(storedToken);
+          if (isValid) {
+            setUser(JSON.parse(storedUser));
+            setToken(storedToken);
+          } else {
+            clearAuth();
+          }
+        }
+      } catch (error) {
+        clearAuth();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+  }, [validateToken, clearAuth]);
+
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("http://localhost:3000/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
-    } else {
-      setState(prev => ({ ...prev, isLoading: false }));
-      throw new Error('Invalid credentials');
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      const userData = data.data.user;
+      const tokenValue = data.data.token;
+
+      setUser(userData);
+      setToken(tokenValue);
+
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("token", tokenValue);
+
+      // ✅ Success toast
+      toast({
+        title: "Login successful",
+        description: `Welcome back!`,
+        duration: 5000,
+        className: "bg-green-500 text-white", // green background
+      });
+
+      return userData.role;
+    } catch (error: any) {
+      // ❌ Failure toast
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid email or password",
+        duration: 5000,
+        className: "bg-red-500 text-white", // red background
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('fleet-user');
-    setState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false
-    });
-  };
-
-  const updateUser = (user: User) => {
-    localStorage.setItem('fleet-user', JSON.stringify(user));
-    setState(prev => ({ ...prev, user }));
-  };
-
-  const value: AuthContextType = {
-    ...state,
-    login,
-    logout,
-    updateUser
+    clearAuth();
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      isLoading, 
+      login, 
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
 };
