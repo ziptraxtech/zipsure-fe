@@ -4,11 +4,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
-import AddUserDialog from "./AddUserModel"; // ✅ import user modal
+import AddUserDialog from "./AddUserModel"; // ✅ user modal
 import { useToast } from "@/components/ui/use-toast";
 
 interface AddOrganizationDialogProps {
@@ -39,7 +42,6 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ Clear button handler
   const handleClear = () => {
     setFormData({
       name: "",
@@ -73,7 +75,7 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({
 
       if (res.ok && json.success) {
         const orgId = json.data.id;
-        localStorage.setItem("organizationId", orgId); // ✅ store locally
+        localStorage.setItem("organizationId", orgId);
         setOrganizationId(orgId);
 
         toast({
@@ -82,25 +84,16 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({
           className: "bg-green-500 text-white",
         });
 
-        handleClear(); // reset after success
-
-        // 👉 open user modal after org creation
+        handleClear();
         setIsUserModalOpen(true);
         onAdded?.();
       } else if (res.status === 400 && json.errors) {
-        // ✅ show field-specific errors
         Object.keys(json.errors).forEach((field) => {
           toast({
             title: `Enter correct data in field: ${field}`,
             duration: 5000,
             className: "bg-red-500 text-white",
           });
-        });
-      } else if (res.status === 500) {
-        toast({
-          title: "Something went wrong",
-          duration: 5000,
-          className: "bg-red-500 text-white",
         });
       } else {
         toast({
@@ -137,29 +130,104 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({
             <DialogTitle>Add New Organization</DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmitOrg} className="grid grid-cols-2 gap-4 mt-2">
-            <input required name="name" placeholder="Name" value={formData.name} onChange={handleChange} className="w-full border p-2 rounded" />
-            <input required name="phone" placeholder="Phone" value={formData.phone} onChange={handleChange} className="w-full border p-2 rounded" />
-            <input required name="email" placeholder="Email" value={formData.email} onChange={handleChange} className="w-full border p-2 rounded" />
-            <input required name="gstNumber" placeholder="GST Number" value={formData.gstNumber} onChange={handleChange} className="w-full border p-2 rounded" />
-            <input required name="city" placeholder="City" value={formData.city} onChange={handleChange} className="w-full border p-2 rounded" />
-            <input required name="state" placeholder="State" value={formData.state} onChange={handleChange} className="w-full border p-2 rounded" />
-            <input required name="country" placeholder="Country" value={formData.country} onChange={handleChange} className="w-full border p-2 rounded" />
-            <input required name="address" placeholder="Address" value={formData.address} onChange={handleChange} className="w-full border p-2 rounded" />
+          <form onSubmit={handleSubmitOrg}>
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div>
+                <Label className="mb-4 block">Name</Label>
+                <Input
+                  required
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label className="mb-4 block">Phone</Label>
+                <Input
+                  required
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label className="mb-4 block">Email</Label>
+                <Input
+                  required
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label className="mb-4 block">GST Number</Label>
+                <Input
+                  required
+                  name="gstNumber"
+                  value={formData.gstNumber}
+                  onChange={handleChange}
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label className="mb-4 block">City</Label>
+                <Input
+                  required
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label className="mb-4 block">State</Label>
+                <Input
+                  required
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label className="mb-4 block">Country</Label>
+                <Input
+                  required
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  className="bg-gray-100"
+                />
+              </div>
+              <div>
+                <Label className="mb-4 block">Address</Label>
+                <Input
+                  required
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className="bg-gray-100"
+                />
+              </div>
+            </div>
 
-            <div className="col-span-2 flex justify-between mt-2">
+            <DialogFooter>
               <Button type="button" onClick={handleClear} variant="secondary">
                 Clear
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Adding..." : "Add"}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Second Modal - User (separate component) */}
+      {/* Second Modal - User */}
       <AddUserDialog
         open={isUserModalOpen}
         onOpenChange={setIsUserModalOpen}

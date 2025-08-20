@@ -73,21 +73,6 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ open, onClose, onUserAdded 
 
         {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
 
-        <div className="grid gap-2">
-          <Input
-            name="username"
-            placeholder="Username"
-            value={formData.username}
-            onChange={handleChange}
-          />
-          <Input
-            name="prize"
-            placeholder="Prize"
-            value={formData.prize}
-            onChange={handleChange}
-          />
-        </div>
-
         <DialogFooter className="mt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={loading}>

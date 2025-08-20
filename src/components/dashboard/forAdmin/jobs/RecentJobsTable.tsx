@@ -136,9 +136,10 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
               <tr className="border-b border-border">
                 <th className="p-2 text-left">Sr. no.</th>
                 <th className="p-2 text-left">Job Title</th>
-                <th className="p-2 text-left">Customer Name</th>
+                <th className="p-2 text-left">Job Description</th>
+                <th className="p-2 text-left">Allocator Name</th>
                 <th className="p-2 text-left">Status</th>
-                <th className="p-2 text-left">Rider</th>
+                <th className="p-2 text-left">Rider & Vehicle</th>
                 <th className="p-2 text-left">Completed</th>
               </tr>
             </thead>
@@ -151,6 +152,7 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
                   >
                     <td className="p-2">{index + 1}</td>
                     <td className="p-2">{job.title || "—"}</td>
+                    <td className="p-2">{job.description || "-"}</td>
                     <td className="p-2">
                       {job.allocator
                         ? `${job.allocator.firstName} ${job.allocator.lastName}`

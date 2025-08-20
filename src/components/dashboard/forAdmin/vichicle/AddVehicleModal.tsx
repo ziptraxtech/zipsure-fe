@@ -10,6 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AddVehicleModalProps {
   open: boolean;
@@ -17,12 +25,16 @@ interface AddVehicleModalProps {
   onVehicleAdded: () => void;
 }
 
-const AddVehicleModal: React.FC<AddVehicleModalProps> = ({ open, onClose, onVehicleAdded }) => {
+const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
+  open,
+  onClose,
+  onVehicleAdded,
+}) => {
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     vehicleNumber: "",
-    vehicleType: "Bike", // Default to Bike
+    vehicleType: "Bike",
     model: "",
     make: "",
     year: "",
@@ -31,8 +43,14 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({ open, onClose, onVehi
 
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleVehicleTypeChange = (value: string) => {
+    setFormData({ ...formData, vehicleType: value });
   };
 
   const handleSubmit = async () => {
@@ -46,7 +64,6 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({ open, onClose, onVehi
       return;
     }
 
-    // ✅ Year validation
     const currentYear = new Date().getFullYear();
     const enteredYear = Number(formData.year);
 
@@ -63,11 +80,15 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({ open, onClose, onVehi
     try {
       setLoading(true);
 
-      // Ensure vehicleType first letter is capitalized
       const capitalizedType =
-        formData.vehicleType.charAt(0).toUpperCase() + formData.vehicleType.slice(1).toLowerCase();
+        formData.vehicleType.charAt(0).toUpperCase() +
+        formData.vehicleType.slice(1).toLowerCase();
 
-      const payload = { ...formData, vehicleType: capitalizedType, year: enteredYear };
+      const payload = {
+        ...formData,
+        vehicleType: capitalizedType,
+        year: enteredYear,
+      };
 
       await axios.post("http://localhost:3000/api/v1/vehicles", payload, {
         headers: {
@@ -79,26 +100,23 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({ open, onClose, onVehi
       onClose();
       setFormData({
         vehicleNumber: "",
-        vehicleType: "Bike", // reset to default
+        vehicleType: "Bike",
         model: "",
         make: "",
         year: "",
         color: "",
       });
 
-      // ✅ Success toast
       toast({
         title: "Success",
         description: "Vehicle added successfully.",
         className: "bg-green-500 text-white",
       });
-
     } catch (err: any) {
       console.error("Error adding vehicle:", err);
 
       if (err.response) {
         if (err.response.status === 500) {
-          // ✅ 500 error
           toast({
             title: "Server Error",
             description: "Something went wrong. Please try again later.",
@@ -106,7 +124,6 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({ open, onClose, onVehi
             className: "bg-red-500 text-white",
           });
         } else if (err.response.status === 400) {
-          // ✅ Validation error from backend
           toast({
             title: "Invalid Input",
             description: `Wrong Input. ${err.response.data.message || ""}`,
@@ -114,7 +131,6 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({ open, onClose, onVehi
             className: "bg-red-500 text-white",
           });
         } else {
-          // Other API errors
           toast({
             title: "Error",
             description: err.response.data.message || "An error occurred.",
@@ -123,7 +139,6 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({ open, onClose, onVehi
           });
         }
       } else {
-        // No response from server
         toast({
           title: "Network Error",
           description: "Unable to connect to the server.",
@@ -143,33 +158,76 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({ open, onClose, onVehi
           <DialogTitle>Add New Vehicle</DialogTitle>
         </DialogHeader>
 
-        {/* Two per row grid layout */}
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            name="vehicleNumber"
-            placeholder="Vehicle Number"
-            value={formData.vehicleNumber}
-            onChange={handleChange}
-          />
+        <div className="grid grid-cols-2 gap-4 py-2">
+          <div>
+            <Label className="mb-4 block">Vehicle Number</Label>
+            <Input
+              name="vehicleNumber"
+              value={formData.vehicleNumber}
+              onChange={handleChange}
+              className="bg-gray-100"
+            />
+          </div>
 
-          {/* Fixed dropdown for vehicleType */}
-          <select
-            name="vehicleType"
-            value={formData.vehicleType}
-            onChange={handleChange}
-            className="border rounded px-3 py-2 w-full"
-          >
-            <option value="Bike">Type - Bike</option>
-            <option value="Car">Type - Car</option>
-            <option value="Truck">Type - Truck</option>
-            <option value="Van">Type - Van</option>
-            <option value="Auto">Type - Auto</option>
-          </select>
+          <div>
+            <Label className="mb-4 block">Vehicle Type</Label>
+            <Select
+              value={formData.vehicleType}
+              onValueChange={handleVehicleTypeChange}
+            >
+              <SelectTrigger className="bg-gray-100">
+                <SelectValue placeholder="Select Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Bike">Bike</SelectItem>
+                <SelectItem value="Car">Car</SelectItem>
+                <SelectItem value="Truck">Truck</SelectItem>
+                <SelectItem value="Van">Van</SelectItem>
+                <SelectItem value="Auto">Auto</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Input name="model" placeholder="Model" value={formData.model} onChange={handleChange} />
-          <Input name="make" placeholder="Make" value={formData.make} onChange={handleChange} />
-          <Input name="year" type="number" placeholder="Year" value={formData.year} onChange={handleChange} />
-          <Input name="color" placeholder="Color" value={formData.color} onChange={handleChange} />
+          <div>
+            <Label className="mb-4 block">Model</Label>
+            <Input
+              name="model"
+              value={formData.model}
+              onChange={handleChange}
+              className="bg-gray-100"
+            />
+          </div>
+
+          <div>
+            <Label className="mb-4 block">Make</Label>
+            <Input
+              name="make"
+              value={formData.make}
+              onChange={handleChange}
+              className="bg-gray-100"
+            />
+          </div>
+
+          <div>
+            <Label className="mb-4 block">Year</Label>
+            <Input
+              name="year"
+              type="number"
+              value={formData.year}
+              onChange={handleChange}
+              className="bg-gray-100"
+            />
+          </div>
+
+          <div>
+            <Label className="mb-4 block">Color</Label>
+            <Input
+              name="color"
+              value={formData.color}
+              onChange={handleChange}
+              className="bg-gray-100"
+            />
+          </div>
         </div>
 
         <DialogFooter className="mt-4 flex justify-end gap-2">
