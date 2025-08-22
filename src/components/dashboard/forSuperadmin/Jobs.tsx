@@ -3,6 +3,7 @@ import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface AllocatorLike {
   id?: string;
@@ -117,38 +118,36 @@ const Jobs: React.FC = () => {
           <CardTitle>Jobs</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border rounded-md">
-              <thead className="bg-primary text-primary-foreground">
-                <tr>
-                  <th className="p-3 text-left">Title</th>
-                  <th className="p-3 text-left">Description</th>
-                  <th className="p-3 text-left">Organization Name</th>
-                  <th className="p-3 text-left">Allocator Name</th>
-                  <th className="p-3 text-left">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.length > 0 ? (
-                  jobs.map((job) => (
-                    <tr key={job.id} className="border-b border-border/50 hover:bg-muted/40">
-                      <td className="p-3">{job.title || "—"}</td>
-                      <td className="p-3">{job.description || "—"}</td>
-                      <td className="p-3">{getOrganizationName(job.organizationId)}</td>
-                      <td className="p-3">{getAllocatorName(job.allocatorId)}</td>
-                      <td className="p-3 capitalize">{job.status || "—"}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="p-4 text-center text-muted-foreground">
-                      {loading ? "Loading jobs..." : "No jobs found"}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Table className="text-xs md:text-sm">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead className="hidden md:table-cell">Description</TableHead>
+                <TableHead>Organization</TableHead>
+                <TableHead className="hidden lg:table-cell">Allocator</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {jobs.length > 0 ? (
+                jobs.map((job) => (
+                  <TableRow key={job.id} className="hover:bg-muted/40">
+                    <TableCell className="whitespace-normal break-words max-w-[200px] md:max-w-none">{job.title || "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell whitespace-normal break-words">{job.description || "—"}</TableCell>
+                    <TableCell className="whitespace-normal break-words">{getOrganizationName(job.organizationId)}</TableCell>
+                    <TableCell className="hidden lg:table-cell whitespace-normal break-words">{getAllocatorName(job.allocatorId)}</TableCell>
+                    <TableCell className="capitalize whitespace-normal break-words">{job.status || "—"}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="p-4 text-center text-muted-foreground">
+                    {loading ? "Loading jobs..." : "No jobs found"}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

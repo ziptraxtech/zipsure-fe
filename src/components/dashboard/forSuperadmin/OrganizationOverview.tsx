@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import AddOrganizationDialog from "./AddOrganization";
 import { Building2Icon } from "lucide-react";
 import {CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export interface Organization {
   name: string;
@@ -75,32 +76,32 @@ const OrganizationTable: React.FC<OrganizationOverviewProps> = ({ organizations,
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="text-left p-2 font-medium">Organization</th>
-            <th className="text-left p-2 font-medium">Status</th>
-            <th className="text-left p-2 font-medium">Phone</th>
-            <th className="text-left p-2 font-medium">Email</th>
-            <th className="text-left p-2 font-medium">GST</th>
-            <th className="text-left p-2 font-medium">Address</th>
-          </tr>
-        </thead>
-        <tbody>
-          {organizations.map((org, index) => (
-            <tr key={index} className="border-b border-border/50 hover:bg-muted/50 fleet-transition">
-              <td className="p-2 font-medium">{org.name}</td>
-              <td className="p-2">{getStatusBadge(org.status)}</td>
-              <td className="p-2">{org.phone}</td>
-              <td className="p-2">{org.email}</td>
-              <td className="p-2">{org.gst}</td>
-              <td className="p-2"><AddressDialog org={org} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table className="text-xs md:text-sm">
+      <TableHeader>
+        <TableRow>
+          <TableHead>Organization</TableHead>
+          <TableHead className="hidden md:table-cell">Status</TableHead>
+          <TableHead>Phone</TableHead>
+          <TableHead className="hidden md:table-cell">Email</TableHead>
+          <TableHead className="hidden lg:table-cell">GST</TableHead>
+          <TableHead>Address</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {organizations.map((org, index) => (
+          <TableRow key={index} className="fleet-transition">
+            <TableCell className="font-medium whitespace-normal break-words max-w-[200px] md:max-w-none">{org.name}</TableCell>
+            <TableCell className="hidden md:table-cell">{getStatusBadge(org.status)}</TableCell>
+            <TableCell className="whitespace-normal break-words">{org.phone}</TableCell>
+            <TableCell className="hidden md:table-cell whitespace-normal break-words">{org.email}</TableCell>
+            <TableCell className="hidden lg:table-cell whitespace-normal break-words">{org.gst}</TableCell>
+            <TableCell>
+              <AddressDialog org={org} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 };
 

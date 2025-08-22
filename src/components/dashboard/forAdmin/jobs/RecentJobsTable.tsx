@@ -8,6 +8,7 @@ import AddJobModal from "./AddJobModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface UserSummary {
   id: string;
@@ -198,71 +199,61 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="p-2 text-left">Sr. no.</th>
-                <th className="p-2 text-left">Job Title</th>
-                <th className="p-2 text-left">Job Description</th>
-                <th className="p-2 text-left">Allocator Name</th>
-                <th className="p-2 text-left">Status</th>
-                <th className="p-2 text-left">Rider & Vehicle</th>
-                <th className="p-2 text-left">Completed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentJobs.length > 0 ? (
-                recentJobs.map((job, index) => (
-                  <tr
-                    key={`${job.title}-${job.allocator?.firstName || ""}`}
-                    className="border-b border-border/50 hover:bg-muted/50"
-                  >
-                    <td className="p-2">{index + 1}</td>
-                    <td className="p-2">{job.title || "—"}</td>
-                    <td className="p-2">{job.description || "-"}</td>
-                    <td className="p-2">
-                      {job.allocator
-                        ? `${job.allocator.firstName} ${job.allocator.lastName}`
-                        : "—"}
-                    </td>
-                    <td className="p-2">
-                      <Badge variant="outline">{job.status}</Badge>
-                    </td>
-
-                    {/* Rider column */}
-                    <td className="p-2">
-                      {job.rider ? (
-                        `${job.rider.firstName} ${job.rider.lastName}`
-                      ) : (
-                        <Button
-                          size="sm"
-                          className="bg-primary text-white"
-                          onClick={() => handleOpenAssignModal(job)}
-                        >
-                          Assign
-                        </Button>
-                      )}
-                    </td>
-
-                    <td className="p-2 text-muted-foreground">
-                      {timeAgo(job.completedAt)}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="p-2 text-center text-muted-foreground"
-                  >
-                    No recent jobs
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Table className="text-xs md:text-sm">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="hidden md:table-cell">Sr. no.</TableHead>
+              <TableHead>Job Title</TableHead>
+              <TableHead className="hidden md:table-cell">Job Description</TableHead>
+              <TableHead className="hidden lg:table-cell">Allocator</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="hidden md:table-cell">Completed</TableHead>
+              <TableHead>Rider & Vehicle</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {recentJobs.length > 0 ? (
+              recentJobs.map((job, index) => (
+                <TableRow
+                  key={`${job.title}-${job.allocator?.firstName || ""}`}
+                  className="hover:bg-muted/50"
+                >
+                  <TableCell className="hidden md:table-cell">{index + 1}</TableCell>
+                  <TableCell className="whitespace-normal break-words max-w-[200px] md:max-w-none">{job.title || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell whitespace-normal break-words">{job.description || "-"}</TableCell>
+                  <TableCell className="hidden lg:table-cell whitespace-normal break-words">
+                    {job.allocator
+                      ? `${job.allocator.firstName} ${job.allocator.lastName}`
+                      : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{job.status}</Badge>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">{timeAgo(job.completedAt)}</TableCell>
+                  <TableCell>
+                    {job.rider ? (
+                      `${job.rider.firstName} ${job.rider.lastName}`
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="bg-primary text-white"
+                        onClick={() => handleOpenAssignModal(job)}
+                      >
+                        Assign
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="p-2 text-center text-muted-foreground">
+                  No recent jobs
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </CardContent>
 
       {/* Add Job Modal */}

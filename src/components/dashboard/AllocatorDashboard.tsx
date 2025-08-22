@@ -19,6 +19,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // Types
 interface Job {
@@ -217,64 +218,62 @@ const AllocatorDashboard: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="p-2 text-left font-bold">Sr. no.</th>
-                  <th className="p-2 text-left font-bold">Job Title</th>
-                  <th className="p-2 text-left font-bold">Job Description</th>
-                  <th className="p-2 text-left font-bold">Allocator Name</th>
-                  <th className="p-2 text-left font-bold">Status</th>
-                  <th className="p-2 text-left font-bold">Rider & Vehicle</th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.length > 0 ? (
-                  jobs.map((job, index) => (
-                    <tr
-                      key={job.id}
-                      className="border-b border-border/50 hover:bg-muted/50"
-                    >
-                      <td className="p-2">{index + 1}</td>
-                      <td className="p-2">{job.title || "—"}</td>
-                      <td className="p-2">{job.description || "-"}</td>
-                      <td className="p-2">
-                        {job.allocator
-                          ? `${job.allocator.firstName} ${job.allocator.lastName}`
-                          : "—"}
-                      </td>
-                      <td className="p-2">
-                        <Badge variant="outline">{job.status}</Badge>
-                      </td>
-                      <td className="p-2">
-                        {job.rider ? (
-                          `${job.rider.firstName} ${job.rider.lastName}`
-                        ) : (
-                          <Button
-                            size="sm"
-                            className="bg-primary text-white"
-                            onClick={() => handleOpenAssignModal(job)}
-                          >
-                            Assign
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="p-2 text-center text-muted-foreground"
-                    >
-                      No recent jobs
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Table className="text-xs md:text-sm">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="hidden md:table-cell font-bold">Sr. no.</TableHead>
+                <TableHead className="font-bold">Job Title</TableHead>
+                <TableHead className="hidden md:table-cell font-bold">Job Description</TableHead>
+                <TableHead className="hidden lg:table-cell font-bold">Allocator</TableHead>
+                <TableHead className="font-bold">Status</TableHead>
+                <TableHead className="font-bold">Rider & Vehicle</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {jobs.length > 0 ? (
+                jobs.map((job, index) => (
+                  <TableRow
+                    key={job.id}
+                    className="hover:bg-muted/50"
+                  >
+                    <TableCell className="hidden md:table-cell">{index + 1}</TableCell>
+                    <TableCell className="whitespace-normal break-words max-w-[200px] md:max-w-none">{job.title || "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell whitespace-normal break-words">{job.description || "-"}</TableCell>
+                    <TableCell className="hidden lg:table-cell whitespace-normal break-words">
+                      {job.allocator
+                        ? `${job.allocator.firstName} ${job.allocator.lastName}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{job.status}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {job.rider ? (
+                        `${job.rider.firstName} ${job.rider.lastName}`
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="bg-primary text-white"
+                          onClick={() => handleOpenAssignModal(job)}
+                        >
+                          Assign
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="p-2 text-center text-muted-foreground"
+                  >
+                    {loadingJobs ? "Loading jobs..." : "No recent jobs"}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
