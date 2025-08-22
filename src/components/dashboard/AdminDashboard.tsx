@@ -3,14 +3,15 @@ import axios from "axios";
 import MetricCard from "./MetricCard";
 import { Button } from "@/components/ui/button";
 import { Truck, Users, ClipboardList, Plus, Eye } from "lucide-react";
-import JobStatusChart from "./forAdmin/JobStatusChart";
-import RecentJobsTable from "./forAdmin/RecentJobsTable";
-import UsersTable from "./forAdmin/UsersTable"; // UsersTable component that accepts 'users' prop
-import AllJobsModal from "./forAdmin/AllJobsModal";
-import AddVehicleModal from "./forAdmin/AddVehicleModal"; 
-import GetAllVehicles from "./forAdmin/GetAllVehicles"; // Import your vehicle modal
+import JobStatusChart from "./forAdmin/jobs/JobStatusChart";
+import RecentJobsTable from "./forAdmin/jobs/RecentJobsTable";
+import UsersTable from "./forAdmin/user-section/UsersTable"; 
+import AllJobsModal from "./forAdmin/jobs/AllJobsModal";
+import AddVehicleModal from "./forAdmin/vichicle/AddVehicleModal"; 
+import GetAllVehicles from "./forAdmin/vichicle/GetAllVehicles"; 
 
 const AdminDashboard = () => {
+  const [organizationName, setOrganizationName] = useState<string>(""); // ✅ store org name
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalJobs, setTotalJobs] = useState(0);
   const [totalVehicles, setTotalVehicles] = useState(0);
@@ -21,9 +22,24 @@ const AdminDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
-  const [isViewVehiclesModalOpen, setIsViewVehiclesModalOpen] = useState(false); // NEW
+  const [isViewVehiclesModalOpen, setIsViewVehiclesModalOpen] = useState(false);
 
-  // Fetch users separately
+  // ✅ Fetch organisation name by ID
+  const fetchOrganisationName = async (orgId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`http://localhost:3000/api/v1/organisations/${orgId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data?.success && res.data.data?.name) {
+        setOrganizationName(res.data.data.name);
+      }
+    } catch (err) {
+      console.error("Error fetching organisation name:", err);
+    }
+  };
+
+  // ✅ Fetch users separately
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -31,14 +47,14 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.success && Array.isArray(res.data.data)) {
-        setAllUsers(res.data.data.slice(0, 25)); // fetch first 25 users
+        setAllUsers(res.data.data.slice(0, 10));
       }
     } catch (err) {
       console.error("Error fetching users:", err);
     }
   };
 
-  // Fetch admin overview, recent jobs, and users
+  // ✅ Fetch dashboard data
   const fetchDashboardData = async () => {
     const token = localStorage.getItem("token");
     try {
@@ -46,17 +62,23 @@ const AdminDashboard = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.success && res.data.data?.overview) {
-        const { totalUsers, totalJobs, totalVehicles, jobStatuses } = res.data.data.overview;
+        const { totalUsers, totalJobs, totalVehicles, jobStatuses, organizationId } = res.data.data.overview;
+
         setTotalUsers(totalUsers || 0);
         setTotalJobs(totalJobs || 0);
         setTotalVehicles(totalVehicles || 0);
         if (jobStatuses) setJobStatuses(jobStatuses);
+
+        // ✅ Fetch organisation name using ID
+        if (organizationId) {
+          await fetchOrganisationName(organizationId);
+        }
       }
+
       if (res.data?.success && res.data.data?.recentJobs) {
         setRecentJobs(res.data.data.recentJobs.slice(0, 5));
       }
 
-      // Fetch users after admin data
       await fetchUsers();
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
@@ -64,14 +86,13 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchDashboardData(); // initial fetch
+    fetchDashboardData();
 
-    // Auto-refresh every 1 minute (60000 ms)
     const interval = setInterval(() => {
       fetchDashboardData();
     }, 60000);
 
-    return () => clearInterval(interval); // cleanup on unmount
+    return () => clearInterval(interval);
   }, []);
 
   const fetchAllJobs = () => {
@@ -102,20 +123,17 @@ const AdminDashboard = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold">Organization Dashboard</h1>
-          <p className="text-muted-foreground">Logistics Corp - Fleet Management Overview</p>
+          <h1 className="text-2xl lg:text-3xl font-bold">{organizationName || "Organization"} Dashboard</h1>
+          <p className="text-muted-foreground">
+            {organizationName ? `${organizationName} - Fleet Management Overview` : "Fleet Management Overview"}
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          {/* Updated button with onClick */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsViewVehiclesModalOpen(true)}
-          >
-            <Eye className="h-4 w-4 mr-2" />View All Vehicles
+          <Button variant="outline" size="sm" onClick={() => setIsViewVehiclesModalOpen(true)}>
+            <Eye className="h-4 w-4 mr-2" /> View All Vehicles
           </Button>
           <Button size="sm" onClick={() => setIsVehicleModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />Add Vehicle
+            <Plus className="h-4 w-4 mr-2" /> Add Vehicle
           </Button>
         </div>
       </div>
@@ -146,7 +164,7 @@ const AdminDashboard = () => {
           onClose={() => setIsVehicleModalOpen(false)}
           onVehicleAdded={() => {
             setIsVehicleModalOpen(false);
-            setTotalVehicles(prev => prev + 1);
+            setTotalVehicles((prev) => prev + 1);
           }}
         />
       )}

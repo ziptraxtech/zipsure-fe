@@ -151,11 +151,13 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Organizations</h2>
-        <AddOrganizationDialog onAdded={() => {}} />
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold">Organizations</h2>
+          <AddOrganizationDialog onAdded={() => {}} />
+        </div>
+        <OrganizationTable organizations={organizationsState} isLoading={isLoadingState} />
       </div>
-      <OrganizationTable organizations={organizationsState} isLoading={isLoadingState} />
     </div>
   );
 };

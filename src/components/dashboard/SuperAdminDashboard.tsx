@@ -4,6 +4,7 @@ import jwtDecode from 'jwt-decode';
 import { Shield } from 'lucide-react';
 import MetricsSection from './forSuperadmin/MetricsSection';
 import OrganizationOverview from './forSuperadmin/OrganizationOverview';
+import AddUserSuperAdmin from './forSuperadmin/addusersuperadmin'; // ✅ Replaced UsersTable import
 
 interface OverviewData {
   totalOrganizations: number;
@@ -68,9 +69,8 @@ const GlobalDashboard: React.FC = () => {
 
         await Promise.all([
           fetchOverview(token),
-          fetchOrganizations(token)
+          fetchOrganizations(token),
         ]);
-
       } catch (error) {
         console.error('Authentication error:', error);
         localStorage.removeItem('token');
@@ -79,18 +79,15 @@ const GlobalDashboard: React.FC = () => {
     };
 
     fetchData();
-
-    // refresh data every 20 seconds
     intervalId = setInterval(fetchData, 20000);
 
-    // cleanup interval on unmount
     return () => clearInterval(intervalId);
   }, [navigate]);
 
   const fetchOverview = async (token: string) => {
     try {
       const res = await fetch('http://localhost:3000/api/v1/analytics/superadmin', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
       if (json.success && json.data?.overview) {
@@ -105,7 +102,7 @@ const GlobalDashboard: React.FC = () => {
     setIsLoading(true);
     try {
       const res = await fetch('http://localhost:3000/api/v1/organizations', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
 
@@ -116,7 +113,9 @@ const GlobalDashboard: React.FC = () => {
           phone: org.phone,
           email: org.email,
           gst: org.gstNumber,
-          address: [org.address, org.city, org.state, org.country].filter(Boolean).join(', ')
+          address: [org.address, org.city, org.state, org.country]
+            .filter(Boolean)
+            .join(', '),
         }));
         setOrganizations(formattedOrgs);
       } else {
@@ -148,6 +147,11 @@ const GlobalDashboard: React.FC = () => {
 
       {/* Organizations Section */}
       <OrganizationOverview organizations={organizations} isLoading={isLoading} />
+
+      {/* Users Section (Super Admin specific) */}
+      <div>
+        <AddUserSuperAdmin /> {/* ✅ Replaced UsersTable with AddUserSuperAdmin */}
+      </div>
     </div>
   );
 };
