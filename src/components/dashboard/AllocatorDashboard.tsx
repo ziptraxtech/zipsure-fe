@@ -39,7 +39,19 @@ interface Job {
   vehicleId?: string;
 }
 
-// ✅ Hardcoded metrics array added here
+interface Rider {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface Vehicle {
+  id: string;
+  vehicleNumber: string;
+  vehicleType: string;
+}
+
+// ✅ Hardcoded metrics array
 const metrics = [
   {
     title: "Jobs Today",
@@ -72,7 +84,6 @@ const metrics = [
   },
 ];
 
-
 const AllocatorDashboard: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
@@ -82,8 +93,9 @@ const AllocatorDashboard: React.FC = () => {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
-  // Rider & Vehicle state
-  const [riders, setRiders] = useState<any[]>([]);
+  // Rider & Vehicle state ✅
+  const [riders, setRiders] = useState<Rider[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedRider, setSelectedRider] = useState<string>("");
   const [selectedVehicle, setSelectedVehicle] = useState<string>("");
 
@@ -114,10 +126,12 @@ const AllocatorDashboard: React.FC = () => {
     fetchAllJobs();
   }, []);
 
-  // Fetch riders when modal opens
+  // ✅ Fetch riders & vehicles when modal opens
   useEffect(() => {
     if (assignModalOpen) {
       const token = localStorage.getItem("token");
+
+      // Fetch riders
       fetch("http://localhost:3000/api/v1/users?role=rider", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -131,6 +145,21 @@ const AllocatorDashboard: React.FC = () => {
           }
         })
         .catch((err) => console.error("Failed to fetch riders", err));
+
+      // Fetch vehicles
+      fetch("http://localhost:3000/api/v1/vehicles/organization", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.data)) {
+            setVehicles(data.data);
+          }
+        })
+        .catch((err) => console.error("Failed to fetch vehicles", err));
     }
   }, [assignModalOpen]);
 
@@ -145,7 +174,7 @@ const AllocatorDashboard: React.FC = () => {
     if (!selectedJob || !selectedRider || !selectedVehicle) return;
     const token = localStorage.getItem("token");
 
-    fetch(`http://localhost:3000/api/v1/jobs/${selectedJob.id}`, {
+    fetch(`http://localhost:3000/api/v1/jobs/${selectedJob.id}/status`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -167,18 +196,18 @@ const AllocatorDashboard: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Metrics Grid - Responsive */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div id="allocator-dashboard-top" className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric, index) => (
           <MetricCard key={index} {...metric} />
         ))}
       </div>
 
-      <Card className="fleet-card-gradient shadow-md border rounded-lg">
+      <Card id="allocator-jobs-section" className="fleet-card-gradient shadow-md border rounded-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
-              Recent Jobs
+              <ClipboardList className="h-5 w-4" />
+              Jobs
             </CardTitle>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => setIsAddJobOpen(true)}>
@@ -224,7 +253,7 @@ const AllocatorDashboard: React.FC = () => {
                         ) : (
                           <Button
                             size="sm"
-                            className="bg-orange-500 hover:bg-orange-600 text-white"
+                            className="bg-primary text-white"
                             onClick={() => handleOpenAssignModal(job)}
                           >
                             Assign
@@ -289,11 +318,17 @@ const AllocatorDashboard: React.FC = () => {
               <SelectValue placeholder="Select Vehicle" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="bike">Bike</SelectItem>
-              <SelectItem value="car">Car</SelectItem>
-              <SelectItem value="van">Van</SelectItem>
-              <SelectItem value="truck">Truck</SelectItem>
-              <SelectItem value="auto">Auto</SelectItem>
+              {vehicles.length > 0 ? (
+                vehicles.map((vehicle) => (
+                  <SelectItem key={vehicle.id} value={vehicle.id}>
+                    {vehicle.vehicleNumber} — {vehicle.vehicleType}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="none" disabled>
+                  No vehicles available
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
 

@@ -4,11 +4,36 @@ import { Button } from "@/components/ui/button";
 import { ClipboardList, Plus, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AddJobModal from "./AddJobModal";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+
+interface UserSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface VehicleSummary {
+  id: string;
+  vehicleNumber: string;
+  vehicleType: string;
+}
+
+interface JobSummary {
+  id: string;
+  title: string;
+  description?: string | null;
+  allocator?: Partial<UserSummary> | null;
+  rider?: Partial<UserSummary> | null;
+  status: string;
+  completedAt: string | null;
+  vehicleId?: string | null;
+}
 
 interface RecentJobsTableProps {
-  recentJobs: any[];
+  recentJobs: JobSummary[];
   fetchAllJobs: () => void;
   loadingJobs: boolean;
 }
@@ -30,19 +55,24 @@ const timeAgo = (dateString: string | null) => {
 const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJobs, loadingJobs }) => {
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<JobSummary | null>(null);
+
+  const { toast } = useToast();
 
   // Rider-related state
-  const [riders, setRiders] = useState<any[]>([]);
+  const [riders, setRiders] = useState<UserSummary[]>([]);
   const [selectedRider, setSelectedRider] = useState<string>("");
 
   // Vehicle-related state
+  const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<string>("");
 
-  // Fetch riders when modal opens
+  // Fetch riders + vehicles when modal opens
   useEffect(() => {
     if (assignModalOpen) {
       const token = localStorage.getItem("token");
+
+      // Fetch riders
       fetch("http://localhost:3000/api/v1/users?role=rider", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -52,16 +82,31 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
         .then((res) => res.json())
         .then((data) => {
           if (data.success && Array.isArray(data.data)) {
-            setRiders(data.data);
+            setRiders(data.data as UserSummary[]);
           }
         })
         .catch((err) => console.error("Failed to fetch riders", err));
+
+      // Fetch vehicles
+      fetch("http://localhost:3000/api/v1/vehicles", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.data)) {
+            setVehicles(data.data as VehicleSummary[]);
+          }
+        })
+        .catch((err) => console.error("Failed to fetch vehicles", err));
     }
   }, [assignModalOpen]);
 
   // Finds job ID based on title & customer name
-  const findJobByTitleAndCustomer = (title: string, customerName: string) => {
-    return recentJobs.find((job) => {
+  const findJobByTitleAndCustomer = (title: string, customerName: string): JobSummary | undefined => {
+    return recentJobs.find((job: JobSummary) => {
       const fullName = job.allocator
         ? `${job.allocator.firstName} ${job.allocator.lastName}`
         : "";
@@ -69,7 +114,7 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
     });
   };
 
-  const handleOpenAssignModal = (job: any) => {
+  const handleOpenAssignModal = (job: JobSummary) => {
     // Get job ID by matching title and customer name
     const customerName = job.allocator
       ? `${job.allocator.firstName} ${job.allocator.lastName}`
@@ -91,7 +136,7 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
 
     const token = localStorage.getItem("token");
 
-    fetch(`http://localhost:3000/api/v1/jobs/${selectedJob.id}`, {
+    fetch(`http://localhost:3000/api/v1/jobs/${selectedJob.id}/status`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -102,12 +147,35 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
         vehicleId: selectedVehicle,
       }),
     })
-      .then((res) => res.json())
-      .then(() => {
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok || data?.success === false) {
+          const errorMsg = data?.details?.message || data?.message || "Failed to assign job";
+          toast({
+            title: "Assignment failed",
+            description: errorMsg,
+            className: "bg-red-500 text-white",
+          });
+          return;
+        }
+        const okMsg = data?.detail?.message || "Job assigned successfully";
+        toast({
+          title: "Success",
+          description: okMsg,
+          className: "bg-green-500 text-white",
+        });
         setAssignModalOpen(false);
-        fetchAllJobs(); // refresh table
+        // Intentionally not auto-refreshing jobs to avoid showing All Jobs list automatically
       })
-      .catch((err) => console.error("Failed to update job", err));
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : "An error occurred.";
+        toast({
+          title: "Assignment failed",
+          description: message,
+          className: "bg-red-500 text-white",
+        });
+        console.error("Failed to update job", err);
+      });
   };
 
   return (
@@ -169,7 +237,7 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
                       ) : (
                         <Button
                           size="sm"
-                          className="bg-orange-500 hover:bg-orange-600 text-white"
+                          className="bg-primary text-white"
                           onClick={() => handleOpenAssignModal(job)}
                         >
                           Assign
@@ -237,11 +305,17 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
               <SelectValue placeholder="Select Vehicle" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="bike">Bike</SelectItem>
-              <SelectItem value="car">Car</SelectItem>
-              <SelectItem value="van">Van</SelectItem>
-              <SelectItem value="truck">Truck</SelectItem>
-              <SelectItem value="auto">Auto</SelectItem>
+              {vehicles.length > 0 ? (
+                vehicles.map((vehicle) => (
+                  <SelectItem key={vehicle.id} value={vehicle.id}>
+                    {vehicle.vehicleNumber} — {vehicle.vehicleType}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="none" disabled>
+                  No vehicles available
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
 

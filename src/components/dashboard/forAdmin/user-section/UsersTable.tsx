@@ -28,7 +28,7 @@ export interface User {
   email: string;
   phone: string;
   role: string;
-  active: boolean;
+  isActive: boolean;
 }
 
 interface UsersTableProps {
@@ -202,7 +202,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                       <td className="p-3">{user.phone || "—"}</td>
                       <td className="p-3 capitalize">{user.role || "—"}</td>
                       <td className="p-3">
-                        {user.active ? (
+                      {user.isActive ? (
                           <span className="text-green-600 font-medium">
                             Active
                           </span>

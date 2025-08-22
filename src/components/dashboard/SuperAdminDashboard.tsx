@@ -30,6 +30,18 @@ interface Organization {
   address: string;
 }
 
+interface ApiOrganization {
+  name: string;
+  isActive: boolean;
+  phone: string;
+  email: string;
+  gstNumber: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+}
+
 const GlobalDashboard: React.FC = () => {
   const [overview, setOverview] = useState<OverviewData>({
     totalOrganizations: 0,
@@ -51,8 +63,6 @@ const GlobalDashboard: React.FC = () => {
       navigate('/login');
       return;
     }
-
-    let intervalId: NodeJS.Timeout;
 
     const fetchData = async () => {
       try {
@@ -79,8 +89,7 @@ const GlobalDashboard: React.FC = () => {
     };
 
     fetchData();
-    intervalId = setInterval(fetchData, 20000);
-
+    const intervalId = setInterval(fetchData, 20000);
     return () => clearInterval(intervalId);
   }, [navigate]);
 
@@ -107,7 +116,7 @@ const GlobalDashboard: React.FC = () => {
       const json = await res.json();
 
       if (json.success && Array.isArray(json.data)) {
-        const formattedOrgs = json.data.map((org: any) => ({
+        const formattedOrgs = json.data.map((org: ApiOrganization) => ({
           name: org.name,
           status: org.isActive ? 'active' : 'inactive',
           phone: org.phone,
@@ -131,7 +140,7 @@ const GlobalDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div id="dashboard-top" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold">Global Dashboard</h1>
           <p className="text-muted-foreground">System-wide overview and analytics</p>
@@ -146,10 +155,12 @@ const GlobalDashboard: React.FC = () => {
       <MetricsSection overview={overview} />
 
       {/* Organizations Section */}
-      <OrganizationOverview organizations={organizations} isLoading={isLoading} />
+      <div id="organizations-section">
+        <OrganizationOverview organizations={organizations} isLoading={isLoading} />
+      </div>
 
       {/* Users Section (Super Admin specific) */}
-      <div>
+      <div id="users-section">
         <AddUserSuperAdmin /> {/* ✅ Replaced UsersTable with AddUserSuperAdmin */}
       </div>
     </div>

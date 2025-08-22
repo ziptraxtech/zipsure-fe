@@ -77,14 +77,14 @@ const SubscriptionPlans: React.FC = () => {
     try {
       if (editingPlan) {
         await axios.put(
-          `http://localhost:3000/api/v1/subscriptions/plans/${editingPlan.id}`,
+          `http://localhost:3000/api/v1/subscriptionPlans/${editingPlan.id}`,
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         toast({ title: "Plan updated successfully!" });
       } else {
         await axios.post(
-          "http://localhost:3000/api/v1/subscriptions/plans",
+          "http://localhost:3000/api/v1/subscriptionPlans/plan/",
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -105,7 +105,7 @@ const SubscriptionPlans: React.FC = () => {
 
     try {
       await axios.delete(
-        `http://localhost:3000/api/v1/subscriptions/plans/${deletePlan.id}`,
+        `http://localhost:3000/api/v1/subscriptionPlans/${deletePlan.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast({ title: "Plan deleted successfully!" });

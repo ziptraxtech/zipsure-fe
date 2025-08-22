@@ -8,7 +8,35 @@ import RecentJobsTable from "./forAdmin/jobs/RecentJobsTable";
 import UsersTable from "./forAdmin/user-section/UsersTable"; 
 import AllJobsModal from "./forAdmin/jobs/AllJobsModal";
 import AddVehicleModal from "./forAdmin/vichicle/AddVehicleModal"; 
-import GetAllVehicles from "./forAdmin/vichicle/GetAllVehicles"; 
+import GetAllVehicles from "./forAdmin/vichicle/GetAllVehicles";
+
+interface JobSummary {
+  id: string;
+  title: string;
+  description?: string | null;
+  allocator?: {
+    firstName: string;
+    lastName: string;
+  } | null;
+  rider?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  status: string;
+  completedAt: string | null;
+  vehicleId?: string | null;
+}
+
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  role: string;
+  isActive: boolean;
+} 
 
 const AdminDashboard = () => {
   const [organizationName, setOrganizationName] = useState<string>(""); // ✅ store org name
@@ -16,9 +44,9 @@ const AdminDashboard = () => {
   const [totalJobs, setTotalJobs] = useState(0);
   const [totalVehicles, setTotalVehicles] = useState(0);
   const [jobStatuses, setJobStatuses] = useState({ assigned: 0, in_progress: 0 });
-  const [recentJobs, setRecentJobs] = useState<any[]>([]);
-  const [allJobs, setAllJobs] = useState<any[]>([]);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [recentJobs, setRecentJobs] = useState<JobSummary[]>([]);
+  const [allJobs, setAllJobs] = useState<JobSummary[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
@@ -90,7 +118,7 @@ const AdminDashboard = () => {
 
     const interval = setInterval(() => {
       fetchDashboardData();
-    }, 60000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, []);
@@ -121,11 +149,11 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div id="admin-dashboard-top" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold">{organizationName || "Organization"} Dashboard</h1>
           <p className="text-muted-foreground">
-            {organizationName ? `${organizationName} - Fleet Management Overview` : "Fleet Management Overview"}
+         
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -150,7 +178,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Users Table Section */}
-      <div>
+      <div id="admin-users-section">
         <UsersTable users={allUsers} />
       </div>
 

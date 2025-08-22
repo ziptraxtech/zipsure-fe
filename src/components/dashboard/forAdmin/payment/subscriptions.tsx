@@ -77,23 +77,46 @@ const Subscriptions = () => {
 
     setIsProcessing(true);
     try {
-      // Replace this URL with your actual subscription endpoint
-      const res = await axios.post(`http://localhost:3000/api/v1/subscriptions/subscribe/${planId}`, {}, {
+      // Step 1: Create subscription with plan ID
+      const subscriptionRes = await axios.post(`http://localhost:3000/api/v1/subscriptions`, {
+        planId: planId
+      }, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (res.data?.success) {
-        // Handle successful subscription
-        alert('Subscription successful!');
-        // Refresh the plans to get updated data
-        await fetchPlans();
-        handleCloseModal();
-      } else {
-        setError("Failed to process subscription. Please try again.");
+      if (!subscriptionRes.data?.success) {
+        throw new Error(subscriptionRes.data?.message || "Failed to create subscription");
       }
-    } catch (err) {
+
+      const { subscriptionId, amount } = subscriptionRes.data.data;
+
+      // Step 2: Create payment order with subscription ID and amount
+      const paymentRes = await axios.post(`http://localhost:3000/api/v1/payments/create-order`, {
+        subscriptionId: subscriptionId,
+        amount: Number(amount) // Ensure amount is a number
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!paymentRes.data?.success) {
+        throw new Error(paymentRes.data?.message || "Failed to create payment order");
+      }
+
+      // Handle successful subscription and payment order creation
+      alert('Subscription and payment order created successfully!');
+      console.log('Payment order data:', paymentRes.data.data);
+      
+      // Refresh the plans to get updated data
+      await fetchPlans();
+      handleCloseModal();
+    } catch (err: unknown) {
       console.error("Error processing subscription:", err);
-      setError("An error occurred while processing your subscription.");
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'message' in err.response.data
+        ? String(err.response.data.message)
+        : "An error occurred while processing your subscription.";
+      setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }

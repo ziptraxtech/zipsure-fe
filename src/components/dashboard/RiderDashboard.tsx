@@ -87,7 +87,7 @@ const RiderDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header - Mobile Responsive */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div id="rider-dashboard-top" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold">My Dashboard</h1>
           <p className="text-muted-foreground">

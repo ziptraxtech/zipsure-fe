@@ -25,11 +25,11 @@ const AllJobsModal: React.FC<AllJobsModalProps> = ({ allJobs, onClose }) => {
           </Button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full border rounded-lg overflow-hidden">
             <thead>
-              <tr className="border-b border-border">
+              <tr className="border-b border-border bg-primary">
                 <th className="p-2 text-left">Sr. no.</th>
-                <th className="p-2 text-left">Customer Name</th>
+                <th className="p-2 text-left">Allocator Name</th>
                 <th className="p-2 text-left">Status</th>
                 <th className="p-2 text-left">Rider</th>
                 <th className="p-2 text-left">Vehicle</th>
@@ -47,6 +47,7 @@ const AllJobsModal: React.FC<AllJobsModalProps> = ({ allJobs, onClose }) => {
                     <td className="p-2">{job.vehicle ? job.vehicle.id : "—"}</td>
                     <td className="p-2">{new Date(job.createdAt).toLocaleString()}</td>
                   </tr>
+                  
                 ))
               ) : (
                 <tr>

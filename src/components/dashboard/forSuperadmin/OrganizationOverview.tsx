@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import AddOrganizationDialog from "./AddOrganization";
+import { Building2Icon } from "lucide-react";
+import {CardTitle } from "@/components/ui/card";
 
 export interface Organization {
   name: string;
@@ -153,7 +155,9 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Organizations</h2>
+        <CardTitle className="flex items-center gap-2">
+              <Building2Icon className="h-5 w-5" />Organizations
+        </CardTitle>
           <AddOrganizationDialog onAdded={() => {}} />
         </div>
         <OrganizationTable organizations={organizationsState} isLoading={isLoadingState} />

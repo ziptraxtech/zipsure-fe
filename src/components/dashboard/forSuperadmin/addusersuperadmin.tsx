@@ -29,7 +29,7 @@ export interface SuperAdminUser {
   email: string;
   phone: string;
   role: string;
-  active: boolean;
+  isActive: boolean;
 }
 
 const AddUserSuperAdmin: React.FC = () => {
@@ -133,7 +133,7 @@ const AddUserSuperAdmin: React.FC = () => {
           className: "bg-red-500 text-white",
         });
       }
-    }
+    } 
   };
 
   // Fetch users for Super Admin
@@ -168,17 +168,16 @@ const AddUserSuperAdmin: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-md border rounded-lg">
+      <Card className="shadow-sm border rounded-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" /> Super Admin - Users
+              <Users className="h-5 w-5" />Users
             </CardTitle>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => setIsAddUserOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Add User
               </Button>
-              {/* ✅ Refresh button removed */}
             </div>
           </div>
         </CardHeader>
@@ -210,7 +209,7 @@ const AddUserSuperAdmin: React.FC = () => {
                       <td className="p-3">{user.phone || "—"}</td>
                       <td className="p-3 capitalize">{user.role || "—"}</td>
                       <td className="p-3">
-                        {user.active ? (
+                        {user.isActive ? (
                           <span className="text-green-600 font-medium">
                             Active
                           </span>
