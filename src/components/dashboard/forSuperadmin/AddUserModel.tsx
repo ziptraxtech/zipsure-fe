@@ -141,7 +141,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmitUser} className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label className="mb-4 block">First Name</Label>
               <Input

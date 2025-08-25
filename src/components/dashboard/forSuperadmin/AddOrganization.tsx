@@ -120,7 +120,7 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({
       <Dialog>
         <DialogTrigger asChild>
           <Button size="sm" className="flex items-center gap-1 h-8 px-3 text-xs">
-            <Plus className="h-4 w-4" />
+            <Plus className="h-6 w-6 mr-1" />
             Add Organization
           </Button>
         </DialogTrigger>

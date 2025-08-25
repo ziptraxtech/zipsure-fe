@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -37,7 +37,8 @@ import {
   Building2,
   MapPin,
   ClipboardList,
-  Home
+  Home,
+  Truck
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
@@ -45,6 +46,10 @@ import logo from '@/assets/logo.png';
 import Subscriptions from '@/components/dashboard/forAdmin/payment/subscriptions';
 // ✅ Superadmin subscription plans
 import SubscriptionPlans from '@/components/dashboard/forSuperadmin/SubscriptionPlans';
+// ✅ Change password
+import ChangePassword from '@/contexts/ChangePassword';
+// ✅ Superadmin jobs
+import Jobs from '@/components/dashboard/forSuperadmin/Jobs';
 
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
@@ -78,9 +83,10 @@ interface NavigationItem {
   icon: React.ComponentType<{ className?: string }>;
   url: string;
   view: ActiveView;
+  scrollTo?: string;
 }
 
-const AppSidebar = ({ onViewChange }: { onViewChange: (view: ActiveView) => void }) => {
+const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChange: (view: ActiveView) => void, orgRef: React.RefObject<HTMLDivElement>, onOpenChangePassword: () => void }) => {
   const { user, logout } = useAuth() as { user: User | null; logout: () => void };
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
@@ -96,37 +102,55 @@ const AppSidebar = ({ onViewChange }: { onViewChange: (view: ActiveView) => void
     }
   })();
 
-  // ✅ Full name from first + last
   const fullName =
     localUser?.firstName && localUser?.lastName
       ? `${localUser.firstName} ${localUser.lastName}`
       : user?.name || "User";
 
-  const handleNavigation = (view: ActiveView) => {
+  const handleNavigation = (view: ActiveView, scrollTo?: string) => {
+    // Handle scrolling to specific sections
+    if (scrollTo) {
+      const element = document.getElementById(scrollTo);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+    
+    // Handle special case for organizations (legacy support)
+    if (view === "organizations" && orgRef.current) {
+      orgRef.current.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    
     setActiveView(view);
     onViewChange(view);
-    // ❌ Removed navigate(url) so it won't trigger 404
   };
 
   const getNavigationItems = (): NavigationItem[] => {
-    const baseItems: NavigationItem[] = [
-      { 
-        id: 'dashboard', 
-        label: 'Dashboard', 
-        icon: Home, 
-        url: '/',
-        view: 'dashboard'
+    // Get role-specific dashboard ID
+    const getDashboardId = () => {
+      switch (user?.role) {
+        case 'superadmin': return 'dashboard-top';
+        case 'admin': return 'admin-dashboard-top';
+        case 'allocator': return 'allocator-dashboard-top';
+        case 'rider': return 'rider-dashboard-top';
+        default: return 'dashboard-top';
       }
+    };
+
+    const baseItems: NavigationItem[] = [
+      { id: 'dashboard', label: 'Dashboard', icon: Home, url: '#', view: 'dashboard', scrollTo: getDashboardId() }
     ];
 
     switch (user?.role) {
       case 'superadmin':
         return [
           ...baseItems,
-          { id: 'organizations', label: 'Organizations', icon: Building2, url: '/organizations', view: 'organizations' },
-          { id: 'analytics', label: 'Global Analytics', icon: BarChart3, url: '/analytics', view: 'analytics' },
-          { id: 'plans', label: 'Subscription Plans', icon: Shield, url: '/plans', view: 'plans' }, // ✅ fixed view
-          { id: 'users', label: 'All Users', icon: Users, url: '/users', view: 'users' },
+          { id: 'organizations', label: 'Organizations', icon: Building2, url: '#', view: 'organizations', scrollTo: 'organizations-section' },
+          { id: 'plans', label: 'Subscription Plans', icon: Shield, url: '/plans', view: 'plans' },
+          { id: 'users', label: 'All Users', icon: Users, url: '#', view: 'users', scrollTo: 'users-section' },
+          { id: 'jobs', label: 'All Jobs', icon: Truck, url: '/jobs', view: 'jobs' },
           { id: 'settings', label: 'System Settings', icon: Settings, url: '/settings', view: 'settings' }
         ];
       
@@ -135,16 +159,14 @@ const AppSidebar = ({ onViewChange }: { onViewChange: (view: ActiveView) => void
           ...baseItems,
           { id: 'subscriptions', label: 'Subscriptions', icon: DollarSign, url: '/subscriptions', view: 'subscriptions' },
           { id: 'fleet', label: 'Fleet Management', icon: ClipboardList, url: '/fleet', view: 'fleet' },
-          { id: 'users', label: 'Team Members', icon: Users, url: '/users', view: 'users' },
-          { id: 'jobs', label: 'Job Overview', icon: ClipboardList, url: '/jobs', view: 'jobs' },
-          { id: 'analytics', label: 'Analytics', icon: BarChart3, url: '/analytics', view: 'analytics' },
+          { id: 'users', label: 'Team Members', icon: Users, url: '#', view: 'users', scrollTo: 'admin-users-section' },
           { id: 'settings', label: 'Organization Settings', icon: Settings, url: '/settings', view: 'settings' }
         ];
       
       case 'allocator':
         return [
           ...baseItems,
-          { id: 'jobs', label: 'Job Allocation', icon: ClipboardList, url: '/jobs', view: 'jobs' },
+          { id: 'jobs', label: 'Job Allocation', icon: ClipboardList, url: '#', view: 'jobs', scrollTo: 'allocator-jobs-section' },
           { id: 'riders', label: 'Riders', icon: Users, url: '/riders', view: 'riders' },
           { id: 'tracking', label: 'Live Tracking', icon: MapPin, url: '/tracking', view: 'tracking' },
           { id: 'reports', label: 'Reports', icon: BarChart3, url: '/reports', view: 'reports' }
@@ -199,7 +221,7 @@ const AppSidebar = ({ onViewChange }: { onViewChange: (view: ActiveView) => void
             <div className="flex items-center gap-3 px-2 py-2">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  {fullName.substring(0, 2).toUpperCase()}
+                  {fullName.substring(0, 1)+localUser.lastName.substring(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
@@ -229,7 +251,7 @@ const AppSidebar = ({ onViewChange }: { onViewChange: (view: ActiveView) => void
                 return (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton 
-                      onClick={() => handleNavigation(item.view)}
+                      onClick={() => handleNavigation(item.view, item.scrollTo)}
                       className={activeView === item.view ? 'bg-muted' : ''}
                     >
                       <Icon className="h-4 w-4" />
@@ -255,7 +277,7 @@ const AppSidebar = ({ onViewChange }: { onViewChange: (view: ActiveView) => void
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenChangePassword}>
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </DropdownMenuItem>
@@ -274,9 +296,13 @@ const AppSidebar = ({ onViewChange }: { onViewChange: (view: ActiveView) => void
 
 const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children }) => {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const { user } = useAuth() as { user: User | null };
 
-  // ✅ Get initials from localStorage or fallback
+  // ✅ Ref for organizations section
+  const orgRef = useRef<HTMLDivElement>(null);
+
+  // ✅ Get initials
   const getUserInitials = (): string => {
     try {
       const stored = localStorage.getItem("user");
@@ -289,7 +315,9 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
           );
         }
       }
-    } catch {}
+    } catch {
+      // Ignore parsing errors
+    }
     if (user?.name) return user.name.substring(0, 2).toUpperCase();
     return "U";
   };
@@ -297,18 +325,24 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
   const renderContent = () => {
     switch (activeView) {
       case 'subscriptions':
-        return <Subscriptions />; // ✅ Admin subscriptions
+        return <Subscriptions />;
       case 'plans':
-        return <SubscriptionPlans />; // ✅ Superadmin subscription plans
+        return <SubscriptionPlans />;
+      case 'jobs':
+        return <Jobs />;
       case 'dashboard':
       default:
-        return children;
+        return (
+          <>
+            {children}
+          </>
+        );
     }
   };
 
   return (
     <SidebarProvider>
-      <AppSidebar onViewChange={setActiveView} />
+      <AppSidebar onViewChange={setActiveView} orgRef={orgRef} onOpenChangePassword={() => setIsChangePasswordOpen(true)} />
       <SidebarInset>
         {/* Header */}
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -336,6 +370,9 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
         <div className="flex-1 p-4 pt-0">
           {renderContent()}
         </div>
+
+        {/* Change Password Modal */}
+        <ChangePassword open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
       </SidebarInset>
     </SidebarProvider>
   );

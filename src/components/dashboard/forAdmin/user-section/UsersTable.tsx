@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export interface User {
   id: string;
@@ -28,7 +29,7 @@ export interface User {
   email: string;
   phone: string;
   role: string;
-  active: boolean;
+  isActive: boolean;
 }
 
 interface UsersTableProps {
@@ -175,78 +176,76 @@ const UsersTable: React.FC<UsersTableProps> = ({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border border-border rounded-md">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="p-3 text-left">S.No</th>
-                  <th className="p-3 text-left">Name</th>
-                  <th className="p-3 text-left">Email</th>
-                  <th className="p-3 text-left">Phone Number</th>
-                  <th className="p-3 text-left">Role</th>
-                  <th className="p-3 text-left">Active Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentUsers.length > 0 ? (
-                  currentUsers.map((user, index) => (
-                    <tr
-                      key={user.id}
-                      className="border-b border-border/50 hover:bg-muted/40"
-                    >
-                      <td className="p-3">{startIndex + index + 1}</td>
-                      <td className="p-3">
-                        {user.firstName || "—"} {user.lastName || "—"}
-                      </td>
-                      <td className="p-3">{user.email || "—"}</td>
-                      <td className="p-3">{user.phone || "—"}</td>
-                      <td className="p-3 capitalize">{user.role || "—"}</td>
-                      <td className="p-3">
-                        {user.active ? (
-                          <span className="text-green-600 font-medium">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="text-red-600 font-medium">
-                            Inactive
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="p-4 text-center text-muted-foreground"
-                    >
-                      {loading ? "Loading users..." : "No users found"}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <Table className="text-xs md:text-sm">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="hidden md:table-cell">S.No</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="hidden md:table-cell">Email</TableHead>
+                <TableHead className="hidden md:table-cell">Phone</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Active</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {currentUsers.length > 0 ? (
+                currentUsers.map((user, index) => (
+                  <TableRow
+                    key={user.id}
+                    className="hover:bg-muted/40"
+                  >
+                    <TableCell className="hidden md:table-cell">{startIndex + index + 1}</TableCell>
+                    <TableCell className="whitespace-normal break-words max-w-[180px] md:max-w-none">
+                      {(user.firstName || "—") + " " + (user.lastName || "—")}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell whitespace-normal break-words">{user.email || "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell whitespace-normal break-words">{user.phone || "—"}</TableCell>
+                    <TableCell className="capitalize whitespace-normal break-words">{user.role || "—"}</TableCell>
+                    <TableCell>
+                      {user.isActive ? (
+                        <span className="text-green-600 font-medium">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="text-red-600 font-medium">
+                          Inactive
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="p-4 text-center text-muted-foreground"
+                  >
+                    {loading ? "Loading users..." : "No users found"}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
 
-            {/* Pagination buttons */}
-            <div className="flex justify-center gap-2 mt-4">
-              <Button
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => prev - 1)}
-              >
-                Previous
-              </Button>
-              <span className="px-2 py-1 text-sm font-medium">
-                {currentPage} / {totalPages}
-              </span>
-              <Button
-                size="sm"
-                disabled={currentPage === totalPages || totalPages === 0}
-                onClick={() => setCurrentPage((prev) => prev + 1)}
-              >
-                Next
-              </Button>
-            </div>
+          {/* Pagination buttons */}
+          <div className="flex justify-center gap-2 mt-4">
+            <Button
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+            >
+              Previous
+            </Button>
+            <span className="px-2 py-1 text-sm font-medium">
+              {currentPage} / {totalPages}
+            </span>
+            <Button
+              size="sm"
+              disabled={currentPage === totalPages || totalPages === 0}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+            >
+              Next
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -258,7 +257,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
             <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-4 py-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
             <div>
               <Label className="mb-4 block">First Name</Label>
               <Input

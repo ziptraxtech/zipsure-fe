@@ -6,25 +6,27 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, ChartOptions } from "cha
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface JobStatusChartProps {
-  jobStatuses: { assigned: number; in_progress: number };
+  jobStatuses: { [key: string]: number }; // accept dynamic keys from API
 }
 
 const JobStatusChart: React.FC<JobStatusChartProps> = ({ jobStatuses }) => {
+  // ✅ Normalize API keys to match chart labels
+  const assignedCount = jobStatuses["assigned"] || 0;
+  const yetToBeAssignedCount = jobStatuses["yet to be assigned"] || 0;
+
   const data = {
-    labels: ["Assigned", "In Progress"],
+    labels: ["Assigned", "Yet to be assigned"],
     datasets: [
       {
-        data: [jobStatuses.assigned || 0, jobStatuses.in_progress || 0],
+        data: [assignedCount, yetToBeAssignedCount],
         backgroundColor: ["#4CAF50", "#FFA500"],
         borderWidth: 1,
       },
     ],
   };
-
-  // ✅ Use proper typing for Chart.js options
   const options: ChartOptions<"doughnut"> = {
     plugins: {
-      legend: { display: true, position: "right" }, // now "right" matches the union type
+      legend: { display: true, position: "right" },
     },
     responsive: true,
     maintainAspectRatio: false,
@@ -32,7 +34,7 @@ const JobStatusChart: React.FC<JobStatusChartProps> = ({ jobStatuses }) => {
   };
 
   return (
-    <Card className="shadow-md border rounded-lg hover:shadow-primary">
+    <Card className="fleet-card-gradient border rounded-lg hover:fleet-shadow fleet-transition cursor-pointer">
       <CardHeader>
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Job Status

@@ -18,6 +18,14 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react"; // delete icon
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Plan {
   id: string;
@@ -30,12 +38,42 @@ interface Plan {
   isActive: boolean;
 }
 
+interface Payment {
+  id: string;
+  subscriptionId: string;
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  amount: string;
+  status: string;
+  currency: string;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  subscription?: {
+    id: string;
+    organizationId: string;
+    planId: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+    amount: string;
+    paymentId: string | null;
+    createdAt: string;
+    updatedAt: string;
+    organization?: {
+      name: string;
+    };
+  };
+}
+
 const SubscriptionPlans: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [deletePlan, setDeletePlan] = useState<Plan | null>(null); // for delete confirmation
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState<boolean>(false);
   const { toast } = useToast();
 
   const token = localStorage.getItem("token");
@@ -56,8 +94,27 @@ const SubscriptionPlans: React.FC = () => {
     }
   };
 
+  const fetchPayments = async () => {
+    setPaymentsLoading(true);
+    try {
+      const res = await axios.get(
+        "http://localhost:3000/api/v1/payments/superadmin",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setPayments(res.data?.data || []);
+    } catch (err) {
+      console.error("Error fetching payments", err);
+      toast({ title: "Error fetching payments", variant: "destructive" });
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchPlans();
+    fetchPayments();
   }, []);
 
   const handleSavePlan = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -77,14 +134,14 @@ const SubscriptionPlans: React.FC = () => {
     try {
       if (editingPlan) {
         await axios.put(
-          `http://localhost:3000/api/v1/subscriptions/plans/${editingPlan.id}`,
+          `http://localhost:3000/api/v1/subscriptionPlans/${editingPlan.id}`,
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         toast({ title: "Plan updated successfully!" });
       } else {
         await axios.post(
-          "http://localhost:3000/api/v1/subscriptions/plans",
+          "http://localhost:3000/api/v1/subscriptionPlans/plan/",
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -105,7 +162,7 @@ const SubscriptionPlans: React.FC = () => {
 
     try {
       await axios.delete(
-        `http://localhost:3000/api/v1/subscriptions/plans/${deletePlan.id}`,
+        `http://localhost:3000/api/v1/subscriptionPlans/${deletePlan.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast({ title: "Plan deleted successfully!" });
@@ -171,6 +228,50 @@ const SubscriptionPlans: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Payments Table */}
+      <Card className="">
+        <CardHeader>
+          <CardTitle>Payments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {paymentsLoading ? (
+            <p>Loading payments...</p>
+          ) : payments.length === 0 ? (
+            <p>No payments found.</p>
+          ) : (
+            <Table className="text-xs md:text-sm">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Organization</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead className="hidden md:table-cell">Paid At</TableHead>
+                  <TableHead className="hidden lg:table-cell">Razorpay Order ID</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments.map((p) => {
+                  const orgName = p.subscription?.organization?.name || "-";
+                  const paidAt = p.paidAt
+                    ? new Date(p.paidAt).toLocaleString()
+                    : "-";
+                  const amount = `${p.currency} ${p.amount}`;
+                  return (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium whitespace-normal break-words max-w-[180px] md:max-w-none">{orgName}</TableCell>
+                      <TableCell className="capitalize whitespace-normal break-words">{p.status}</TableCell>
+                      <TableCell className="whitespace-normal break-words">{amount}</TableCell>
+                      <TableCell className="hidden md:table-cell whitespace-normal break-words">{paidAt}</TableCell>
+                      <TableCell className="hidden lg:table-cell whitespace-normal break-all">{p.razorpayOrderId || "-"}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Create / Edit Modal */}
       <Dialog open={open} onOpenChange={setOpen}>

@@ -91,6 +91,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({
       console.error("Error adding job:", err);
 
       if (err.response?.status === 500) {
+        
         toast({
           variant: "destructive",
           title: "Error",

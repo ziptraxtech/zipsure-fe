@@ -58,9 +58,9 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
           <p>Loading vehicles...</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full">
+            <table className="min-w-full border rounded-lg overflow-hidden">
               <thead>
-                <tr className="border-b">
+                <tr className="border-b bg-primary">
                   <th className="px-4 py-2 ">Vehicle Number</th>
                   <th className="px-4 py-2 ">Type</th>
                   <th className="px-4 py-2 ">Model</th>
