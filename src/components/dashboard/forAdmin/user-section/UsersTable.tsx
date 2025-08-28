@@ -3,6 +3,8 @@ import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Eye, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
 import {
   Dialog,
   DialogContent,
@@ -75,7 +77,8 @@ const UsersTable: React.FC<UsersTableProps> = ({
         toast({
           title: "Authentication error",
           description: "You are not authenticated.",
-          variant: "destructive",
+          className: "bg-red-500 text-white",
+          duration: 5000,
         });
         return;
       }
@@ -127,18 +130,34 @@ const UsersTable: React.FC<UsersTableProps> = ({
           title: "Error",
           description: "Something went wrong.",
           className: "bg-red-500 text-white",
+          duration: 5000,
         });
-      } else if (status === 400) {
+      } else if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        let errorMessage = "Invalid input";
+        
+        if (errorData.details && Array.isArray(errorData.details)) {
+          errorMessage = errorData.details
+            .map((d: any) => `${d.field || 'Field'}: ${d.message || 'Invalid value'}`)
+            .join("\n");
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+        
         toast({
-          title: "Error",
-          description: "Wrong input.",
-          className: "bg-red-500 text-white",
+          title: "Input Error",
+          description: errorMessage,
+          className: "bg-red-500 text-white whitespace-pre-line",
+          duration: 5000,
         });
       } else {
         toast({
           title: "Error",
           description: "User not created.",
           className: "bg-red-500 text-white",
+          duration: 5000,
         });
       }
     }
@@ -202,16 +221,14 @@ const UsersTable: React.FC<UsersTableProps> = ({
                     <TableCell className="hidden md:table-cell whitespace-normal break-words">{user.phone || "—"}</TableCell>
                     <TableCell className="capitalize whitespace-normal break-words">{user.role || "—"}</TableCell>
                     <TableCell>
-                      {user.isActive ? (
-                        <span className="text-green-600 font-medium">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="text-red-600 font-medium">
-                          Inactive
-                        </span>
-                      )}
+                    <Badge variant="outline" className={`capitalize ${
+                          user.isActive ? "text-green-500 border-green-500" : "text-red-500 border-red-500"
+                          }`}
+                            >
+                      {user.isActive ? "Active" : "Inactive"}
+                    </Badge>
                     </TableCell>
+
                   </TableRow>
                 ))
               ) : (

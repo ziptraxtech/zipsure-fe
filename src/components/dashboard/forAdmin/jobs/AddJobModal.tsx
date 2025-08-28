@@ -46,8 +46,9 @@ const AddJobModal: React.FC<AddJobModalProps> = ({
     const token = localStorage.getItem("token");
     if (!token) {
       toast({
-        variant: "destructive",
+        className: "bg-red-500 text-white",
         title: "Error",
+        duration: 5000,
         description: "You are not authenticated.",
       });
       return;
@@ -68,10 +69,10 @@ const AddJobModal: React.FC<AddJobModalProps> = ({
 
       if (response.status === 201 || response.status === 200) {
         toast({
-          variant: "default",
           title: "Success",
           description: "Job created successfully",
           className: "bg-green-500 text-white",
+          duration: 5000,
         });
         onJobAdded();
         onClose();
@@ -91,26 +92,38 @@ const AddJobModal: React.FC<AddJobModalProps> = ({
       console.error("Error adding job:", err);
 
       if (err.response?.status === 500) {
-        
         toast({
-          variant: "destructive",
           title: "Error",
-          description: "Something went wrong",
+          description: "Something went wrong on the server",
           className: "bg-red-500 text-white",
+          duration: 10000,
         });
       } else if (err.response?.status === 400) {
+        const errorData = err.response.data;
+        let errorMessage = "Invalid input";
+        
+        if (errorData.details && Array.isArray(errorData.details)) {
+          errorMessage = errorData.details
+            .map((d: any) => `${d.field || 'Field'}: ${d.message || 'Invalid value'}`)
+            .join("\n");
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+
         toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Wrong input",
-          className: "bg-red-500 text-white",
+          title: errorData.title || "Validation Error",
+          description: errorMessage,
+          className: "bg-red-500 text-white whitespace-pre-line",
+          duration: 5000,
         });
       } else {
         toast({
-          variant: "destructive",
           title: "Error",
-          description: "Job not created",
+          description: err.message || "Failed to create job",
           className: "bg-red-500 text-white",
+          duration: 5000,
         });
       }
     } finally {

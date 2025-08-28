@@ -57,6 +57,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ open, onOpenChange }) =
       toast({
         title: 'Password updated',
         description: 'Your password was changed successfully.',
+        duration: 5000,
         className: 'bg-green-500 text-white',
       });
       
@@ -70,6 +71,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ open, onOpenChange }) =
       toast({
         title: 'Update failed',
         description: errorMessage,
+        duration: 5000,
         className: 'bg-red-500 text-white',
       });
     } finally {

@@ -23,6 +23,7 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({
 }) => {
   const { toast } = useToast();
 
+  const [isOrgDialogOpen, setIsOrgDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -61,7 +62,6 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({
 
     try {
       const token = localStorage.getItem("token");
-
       const res = await fetch("http://localhost:3000/api/v1/organizations", {
         method: "POST",
         headers: {
@@ -75,18 +75,17 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({
 
       if (res.ok && json.success) {
         const orgId = json.data.id;
-        localStorage.setItem("organizationId", orgId);
         setOrganizationId(orgId);
-
         toast({
           title: "Organization created successfully",
           duration: 5000,
           className: "bg-green-500 text-white",
         });
-
         handleClear();
-        setIsUserModalOpen(true);
+        // First refresh the organization list
         onAdded?.();
+        // Then open the user dialog
+        setIsUserModalOpen(true);
       } else if (res.status === 400 && json.errors) {
         Object.keys(json.errors).forEach((field) => {
           toast({
@@ -117,9 +116,9 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({
   return (
     <>
       {/* First Modal - Organization */}
-      <Dialog>
+      <Dialog open={isOrgDialogOpen} onOpenChange={setIsOrgDialogOpen}>
         <DialogTrigger asChild>
-          <Button size="sm" className="flex items-center gap-1 h-8 px-3 text-xs">
+          <Button size="sm" className="flex items-center gap-1 h-8 px-3 text-xs" onClick={() => setIsOrgDialogOpen(true)}>
             <Plus className="h-6 w-6 mr-1" />
             Add Organization
           </Button>
@@ -232,6 +231,10 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({
         open={isUserModalOpen}
         onOpenChange={setIsUserModalOpen}
         organizationId={organizationId}
+        onUserCreated={() => {
+          setIsOrgDialogOpen(false);
+          onAdded?.();
+        }}
       />
     </>
   );

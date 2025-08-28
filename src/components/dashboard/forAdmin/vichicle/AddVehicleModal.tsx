@@ -59,7 +59,8 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
       toast({
         title: "Authentication Error",
         description: "You are not authenticated.",
-        variant: "destructive",
+        className: "bg-red-500 text-white",
+        duration: 5000,
       });
       return;
     }
@@ -71,8 +72,8 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
       toast({
         title: "Invalid Year",
         description: `Year should be between 1980 and ${currentYear}`,
-        variant: "destructive",
         className: "bg-red-500 text-white",
+        duration: 5000,
       });
       return;
     }
@@ -120,30 +121,43 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
           toast({
             title: "Server Error",
             description: "Something went wrong. Please try again later.",
-            variant: "destructive",
             className: "bg-red-500 text-white",
+            duration: 5000,
           });
-        } else if (err.response.status === 400) {
+        } else if (err.response?.status === 400) {
+          const errorData = err.response.data;
+          let errorMessage = "Invalid input";
+          
+          if (errorData.details && Array.isArray(errorData.details)) {
+            errorMessage = errorData.details
+              .map((d: any) => `${d.field || 'Field'}: ${d.message || 'Invalid value'}`)
+              .join("\n");
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (typeof errorData === 'string') {
+            errorMessage = errorData;
+          }
+
           toast({
-            title: "Invalid Input",
-            description: `Wrong Input. ${err.response.data.message || ""}`,
-            variant: "destructive",
-            className: "bg-red-500 text-white",
+            title: errorData.title || "Input Error",
+            description: errorMessage,
+            className: "bg-red-500 text-white whitespace-pre-line",
+            duration: 5000,
           });
         } else {
           toast({
             title: "Error",
             description: err.response.data.message || "An error occurred.",
-            variant: "destructive",
             className: "bg-red-500 text-white",
+            duration: 5000,
           });
         }
       } else {
         toast({
           title: "Network Error",
           description: "Unable to connect to the server.",
-          variant: "destructive",
           className: "bg-red-500 text-white",
+          duration: 5000,
         });
       }
     } finally {

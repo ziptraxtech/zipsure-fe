@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 interface AllocatorLike {
   id?: string;
@@ -77,7 +78,7 @@ const Jobs: React.FC = () => {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
       console.error("Error fetching jobs", error);
-      toast({ title: "Failed to fetch jobs", description: message, variant: "destructive" });
+      toast({ title: "Failed to fetch jobs", description: message, className: "bg-red-500 text-white", duration: 5000 });
     } finally {
       setLoading(false);
     }
@@ -105,6 +106,21 @@ const Jobs: React.FC = () => {
       return `${user.firstName || ""} ${user.lastName || ""}`.trim() || "—";
     }
     return "—";
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'in progress':
+        return <Badge variant="outline" className="text-blue-600 border-blue-600">In Progress</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="text-amber-500 border-amber-500">Pending</Badge>;
+      case 'completed':
+        return <Badge variant="outline" className="text-green-600 border-green-600">Completed</Badge>;
+      case 'yet to be assigned':
+        return <Badge variant="outline" className="text-gray-500 border-gray-500">Yet to be assigned</Badge>;
+      default:
+        return <Badge variant="outline" className="capitalize">{status || '—'}</Badge>;
+    }
   };
 
   return (
@@ -136,7 +152,9 @@ const Jobs: React.FC = () => {
                     <TableCell className="hidden md:table-cell whitespace-normal break-words">{job.description || "—"}</TableCell>
                     <TableCell className="whitespace-normal break-words">{getOrganizationName(job.organizationId)}</TableCell>
                     <TableCell className="hidden lg:table-cell whitespace-normal break-words">{getAllocatorName(job.allocatorId)}</TableCell>
-                    <TableCell className="capitalize whitespace-normal break-words">{job.status || "—"}</TableCell>
+                    <TableCell className="whitespace-normal break-words">
+                      {getStatusBadge(job.status)}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
@@ -155,5 +173,3 @@ const Jobs: React.FC = () => {
 };
 
 export default Jobs;
-
-

@@ -44,7 +44,7 @@ const AllJobsModal: React.FC<AllJobsModalProps> = ({ allJobs, onClose }) => {
                     <td className="p-2">{job.allocator ? `${job.allocator.firstName} ${job.allocator.lastName}` : "—"}</td>
                     <td className="p-2"><Badge variant="outline">{job.status}</Badge></td>
                     <td className="p-2">{job.rider ? `${job.rider.firstName} ${job.rider.lastName}` : "—"}</td>
-                    <td className="p-2">{job.vehicle ? job.vehicle.id : "—"}</td>
+                    <td className="p-2">{job.vehicle ? job.vehicle.vehicleNumber : "—"}</td>
                     <td className="p-2">{new Date(job.createdAt).toLocaleString()}</td>
                   </tr>
                   

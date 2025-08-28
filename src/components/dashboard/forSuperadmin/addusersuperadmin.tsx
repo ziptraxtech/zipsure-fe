@@ -21,6 +21,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 // Super Admin User type
 export interface SuperAdminUser {
@@ -69,7 +70,8 @@ const AddUserSuperAdmin: React.FC = () => {
         toast({
           title: "Authentication error",
           description: "You are not authenticated.",
-          variant: "destructive",
+          className: "bg-red-500 text-white",
+          duration: 5000,
         });
         return;
       }
@@ -94,6 +96,7 @@ const AddUserSuperAdmin: React.FC = () => {
 
       toast({
         title: "Success",
+        duration: 5000,
         description: "User created successfully!",
         className: "bg-green-500 text-white",
       });
@@ -120,18 +123,21 @@ const AddUserSuperAdmin: React.FC = () => {
           title: "Error",
           description: "Something went wrong.",
           className: "bg-red-500 text-white",
+          duration: 5000,
         });
       } else if (status === 400) {
         toast({
           title: "Error",
           description: "Wrong input.",
           className: "bg-red-500 text-white",
+          duration: 5000,
         });
       } else {
         toast({
           title: "Error",
           description: "User not created.",
           className: "bg-red-500 text-white",
+          duration: 5000,
         });
       }
     } 
@@ -207,9 +213,9 @@ const AddUserSuperAdmin: React.FC = () => {
                     <TableCell className="capitalize whitespace-normal break-words">{user.role || "—"}</TableCell>
                     <TableCell>
                       {user.isActive ? (
-                        <span className="text-green-600 font-medium">Active</span>
+                        <Badge variant="outline" className="text-success border-success">Active</Badge>
                       ) : (
-                        <span className="text-red-600 font-medium">Inactive</span>
+                        <Badge variant="outline" className="text-destructive border-destructive">Inactive</Badge>
                       )}
                     </TableCell>
                   </TableRow>

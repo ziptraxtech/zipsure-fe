@@ -16,12 +16,14 @@ interface AddUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   organizationId: string | null;
+  onUserCreated?: () => void;
 }
 
 const AddUserDialog: React.FC<AddUserDialogProps> = ({
   open,
   onOpenChange,
   organizationId,
+  onUserCreated,
 }) => {
   const { toast } = useToast();
 
@@ -116,6 +118,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
           role: "rider",
         });
         onOpenChange(false);
+        onUserCreated?.();
       } else {
         toast({
           title: "Invalid Input",
