@@ -89,6 +89,7 @@ const SubscriptionPlans: React.FC = () => {
       setPlans(res.data.data || []);
     } catch (err) {
       console.error("Error fetching plans", err);
+      toast({ title: "Error fetching plans", className: "bg-red-500 text-white", duration: 5000 });
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ const SubscriptionPlans: React.FC = () => {
       setPayments(res.data?.data || []);
     } catch (err) {
       console.error("Error fetching payments", err);
-      toast({ title: "Error fetching payments", variant: "destructive" });
+      toast({ title: "Error fetching payments", className: "bg-red-500 text-white", duration: 5000 });
     } finally {
       setPaymentsLoading(false);
     }
@@ -138,14 +139,14 @@ const SubscriptionPlans: React.FC = () => {
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        toast({ title: "Plan updated successfully!" });
+        toast({ title: "Plan updated successfully!", duration: 5000, className: "bg-green-500 text-white" });
       } else {
         await axios.post(
           "http://localhost:3000/api/v1/subscriptionPlans/plan/",
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        toast({ title: "Plan created successfully!" });
+        toast({ title: "Plan created successfully!", duration: 5000, className: "bg-green-500 text-white" });
       }
 
       fetchPlans();
@@ -153,7 +154,7 @@ const SubscriptionPlans: React.FC = () => {
       setEditingPlan(null);
     } catch (err) {
       console.error("Error saving plan", err);
-      toast({ title: "Error saving plan", variant: "destructive" });
+      toast({ title: "Error saving plan", className: "bg-red-500 text-white", duration: 5000 });
     }
   };
 
@@ -165,11 +166,11 @@ const SubscriptionPlans: React.FC = () => {
         `http://localhost:3000/api/v1/subscriptionPlans/${deletePlan.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast({ title: "Plan deleted successfully!" });
+      toast({ title: "Plan deleted successfully!", duration: 5000, className: "bg-green-500 text-white" });
       fetchPlans();
     } catch (err) {
       console.error("Error deleting plan", err);
-      toast({ title: "Error deleting plan", variant: "destructive" });
+      toast({ title: "Error deleting plan", duration: 5000, className: "bg-red-500 text-white" });
     } finally {
       setDeletePlan(null);
     }

@@ -118,7 +118,8 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Authentication required. Please log in.", {
-        style: { backgroundColor: '#ef4444', color: 'white' }
+        className: "bg-red-500 text-white",
+        duration: 5000,
       });
       return;
     }
@@ -154,7 +155,8 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
       const res = await loadRazorpayScript();
       if (!res) {
         toast.error("Failed to load Razorpay. Please try again.", {
-          style: { backgroundColor: '#ef4444', color: 'white' }
+          className: "bg-red-500 text-white",
+          duration: 5000,
         });
         return;
       }
@@ -175,20 +177,23 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
           
           if (verificationResult.success) {
             toast.success("Payment verified successfully! Subscription activated.", {
-              style: { backgroundColor: '#22c55e', color: 'white' }
+              className: "bg-green-500 text-white",
+              duration: 5000,
             });
             console.log("Payment verified:", verificationResult);
             onClose();
           } else {
             toast.error("Payment succeeded but verification failed. Please contact support.", {
-              style: { backgroundColor: '#ef4444', color: 'white' }
+              className: "bg-red-500 text-white",
+              duration: 5000,
             });
           }
         } catch (err: unknown) {
           console.error("Payment verification failed:", err);
           const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
           toast.error(`Payment verification failed: ${errorMessage}`, {
-            style: { backgroundColor: '#ef4444', color: 'white' }
+            className: "bg-red-500 text-white",
+            duration: 5000,
           });
         }
       },

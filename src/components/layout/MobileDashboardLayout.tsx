@@ -50,6 +50,8 @@ import SubscriptionPlans from '@/components/dashboard/forSuperadmin/Subscription
 import ChangePassword from '@/contexts/ChangePassword';
 // ✅ Superadmin jobs
 import Jobs from '@/components/dashboard/forSuperadmin/Jobs';
+// ✅ Rider jobs
+import RiderJobs from '@/components/dashboard/forRider/Jobs-rider';
 
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
@@ -75,7 +77,8 @@ type ActiveView =
   | 'riders'
   | 'tracking'
   | 'reports'
-  | 'history';
+  | 'history'
+  | 'jobs-rider'; // ✅ Added missing view
 
 interface NavigationItem {
   id: string;
@@ -150,34 +153,25 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
           { id: 'organizations', label: 'Organizations', icon: Building2, url: '#', view: 'organizations', scrollTo: 'organizations-section' },
           { id: 'plans', label: 'Subscription Plans', icon: Shield, url: '/plans', view: 'plans' },
           { id: 'users', label: 'All Users', icon: Users, url: '#', view: 'users', scrollTo: 'users-section' },
-          { id: 'jobs', label: 'All Jobs', icon: Truck, url: '/jobs', view: 'jobs' },
-          { id: 'settings', label: 'System Settings', icon: Settings, url: '/settings', view: 'settings' }
+          { id: 'jobs', label: 'All Jobs', icon: Truck, url: '/jobs', view: 'jobs' }
         ];
       
       case 'admin':
         return [
           ...baseItems,
           { id: 'subscriptions', label: 'Subscriptions', icon: DollarSign, url: '/subscriptions', view: 'subscriptions' },
-          { id: 'fleet', label: 'Fleet Management', icon: ClipboardList, url: '/fleet', view: 'fleet' },
-          { id: 'users', label: 'Team Members', icon: Users, url: '#', view: 'users', scrollTo: 'admin-users-section' },
-          { id: 'settings', label: 'Organization Settings', icon: Settings, url: '/settings', view: 'settings' }
+          { id: 'users', label: 'Team Members', icon: Users, url: '#', view: 'users', scrollTo: 'admin-users-section' }
         ];
-      
       case 'allocator':
         return [
           ...baseItems,
           { id: 'jobs', label: 'Job Allocation', icon: ClipboardList, url: '#', view: 'jobs', scrollTo: 'allocator-jobs-section' },
-          { id: 'riders', label: 'Riders', icon: Users, url: '/riders', view: 'riders' },
-          { id: 'tracking', label: 'Live Tracking', icon: MapPin, url: '/tracking', view: 'tracking' },
-          { id: 'reports', label: 'Reports', icon: BarChart3, url: '/reports', view: 'reports' }
         ];
       
       case 'rider':
         return [
           ...baseItems,
-          { id: 'jobs', label: 'My Jobs', icon: ClipboardList, url: '/jobs', view: 'jobs' },
-          { id: 'tracking', label: 'Current Route', icon: MapPin, url: '/tracking', view: 'tracking' },
-          { id: 'history', label: 'Job History', icon: BarChart3, url: '/history', view: 'history' }
+          { id: 'jobs', label: 'All Jobs', icon: ClipboardList, url: '/jobs-rider', view: 'jobs-rider' }, // ✅ corrected
         ];
       
       default:
@@ -221,7 +215,7 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
             <div className="flex items-center gap-3 px-2 py-2">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  {fullName.substring(0, 1)+localUser.lastName.substring(0, 1).toUpperCase()}
+                  {(fullName?.substring(0, 1) || "") + (localUser?.lastName?.substring(0, 1)?.toUpperCase() || "")}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
@@ -330,6 +324,8 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
         return <SubscriptionPlans />;
       case 'jobs':
         return <Jobs />;
+      case 'jobs-rider': // ✅ fixed view name
+        return <RiderJobs />;
       case 'dashboard':
       default:
         return (
