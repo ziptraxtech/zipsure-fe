@@ -4,7 +4,11 @@ import jwtDecode from 'jwt-decode';
 import { Shield } from 'lucide-react';
 import MetricsSection from './forSuperadmin/MetricsSection';
 import OrganizationOverview from './forSuperadmin/OrganizationOverview';
-import AddUserSuperAdmin from './forSuperadmin/addusersuperadmin'; // ✅ Replaced UsersTable import
+import AddUserSuperAdmin from './forSuperadmin/addusersuperadmin'
+
+// Using Vite's environment variables with fallback
+const API_URL = import.meta.env.VITE_API_URL;
+console.log('Using API URL:', API_URL);
 
 interface OverviewData {
   totalOrganizations: number;
@@ -95,28 +99,57 @@ const GlobalDashboard: React.FC = () => {
 
   const fetchOverview = async (token: string) => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/analytics/superadmin', {
-        headers: { Authorization: `Bearer ${token}` },
+      const url = `${API_URL}/api/v1/analytics/superadmin`;
+      console.log('Fetching overview from:', url);
+      
+      const res = await fetch(url, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
       });
-      const json = await res.json();
-      if (json.success && json.data?.overview) {
-        setOverview(json.data.overview);
+      
+      console.log('Response status:', res.status);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      console.log('Received data:', data);
+      
+      if (data.success && data.data?.overview) {
+        setOverview(data.data.overview);
       }
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
+      console.error('Error in fetchOverview:', err);
     }
   };
 
   const fetchOrganizations = async (token: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:3000/api/v1/organizations', {
-        headers: { Authorization: `Bearer ${token}` },
+      const url = `${API_URL}/api/v1/organizations`;
+      console.log('Fetching organizations from:', url);
+      
+      const res = await fetch(url, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
       });
-      const json = await res.json();
+      
+      console.log('Organizations response status:', res.status);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      console.log('Organizations data:', data);
 
-      if (json.success && Array.isArray(json.data)) {
-        const formattedOrgs = json.data.map((org: ApiOrganization) => ({
+      if (data.success && Array.isArray(data.data)) {
+        const formattedOrgs = data.data.map((org: ApiOrganization) => ({
           name: org.name,
           status: org.isActive ? 'active' : 'inactive',
           phone: org.phone,
@@ -128,7 +161,7 @@ const GlobalDashboard: React.FC = () => {
         }));
         setOrganizations(formattedOrgs);
       } else {
-        console.error('Failed to fetch organizations:', json.message || 'Unknown error');
+        console.error('Failed to fetch organizations:', data.message || 'Unknown error');
       }
     } catch (err) {
       console.error('Error in fetchOrganizations:', err);

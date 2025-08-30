@@ -27,6 +27,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface Plan {
   id: string;
   name: string;
@@ -80,16 +82,27 @@ const SubscriptionPlans: React.FC = () => {
 
   const fetchPlans = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:3000/api/v1/subscriptions/plans",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const url = `${API_URL}/api/v1/subscriptions/plans`;
+      console.log('Fetching subscription plans from:', url);
+      
+      const res = await axios.get(url, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+      });
+      
+      console.log('Subscription plans response status:', res.status);
       setPlans(res.data.data || []);
     } catch (err) {
       console.error("Error fetching plans", err);
-      toast({ title: "Error fetching plans", className: "bg-red-500 text-white", duration: 5000 });
+      toast({ 
+        title: "Error",
+        description: "Failed to fetch subscription plans. Please try again.",
+        className: "bg-red-500 text-white",
+        duration: 5000 
+      });
     } finally {
       setLoading(false);
     }
@@ -98,16 +111,27 @@ const SubscriptionPlans: React.FC = () => {
   const fetchPayments = async () => {
     setPaymentsLoading(true);
     try {
-      const res = await axios.get(
-        "http://localhost:3000/api/v1/payments/superadmin",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const url = `${API_URL}/api/v1/payments/superadmin`;
+      console.log('Fetching payments from:', url);
+      
+      const res = await axios.get(url, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+      });
+      
+      console.log('Payments response status:', res.status);
       setPayments(res.data?.data || []);
     } catch (err) {
       console.error("Error fetching payments", err);
-      toast({ title: "Error fetching payments", className: "bg-red-500 text-white", duration: 5000 });
+      toast({ 
+        title: "Error",
+        description: "Failed to fetch payments. Please try again.",
+        className: "bg-red-500 text-white",
+        duration: 5000 
+      });
     } finally {
       setPaymentsLoading(false);
     }
@@ -133,20 +157,32 @@ const SubscriptionPlans: React.FC = () => {
     };
 
     try {
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
+
       if (editingPlan) {
-        await axios.put(
-          `http://localhost:3000/api/v1/subscriptionPlans/${editingPlan.id}`,
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        toast({ title: "Plan updated successfully!", duration: 5000, className: "bg-green-500 text-white" });
+        const url = `${API_URL}/api/v1/subscriptionPlans/${editingPlan.id}`;
+        console.log('Updating plan at:', url);
+        await axios.put(url, payload, { headers });
+        toast({ 
+          title: "Success", 
+          description: "Plan updated successfully!", 
+          className: "bg-green-500 text-white",
+          duration: 5000 
+        });
       } else {
-        await axios.post(
-          "http://localhost:3000/api/v1/subscriptionPlans/plan/",
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        toast({ title: "Plan created successfully!", duration: 5000, className: "bg-green-500 text-white" });
+        const url = `${API_URL}/api/v1/subscriptionPlans/plan/`;
+        console.log('Creating new plan at:', url);
+        await axios.post(url, payload, { headers });
+        toast({ 
+          title: "Success", 
+          description: "Plan created successfully!", 
+          className: "bg-green-500 text-white",
+          duration: 5000 
+        });
       }
 
       fetchPlans();
@@ -154,7 +190,13 @@ const SubscriptionPlans: React.FC = () => {
       setEditingPlan(null);
     } catch (err) {
       console.error("Error saving plan", err);
-      toast({ title: "Error saving plan", className: "bg-red-500 text-white", duration: 5000 });
+      const errorMessage = err.response?.data?.message || "Failed to save plan. Please try again.";
+      toast({ 
+        title: "Error",
+        description: errorMessage,
+        className: "bg-red-500 text-white",
+        duration: 5000 
+      });
     }
   };
 
@@ -162,15 +204,36 @@ const SubscriptionPlans: React.FC = () => {
     if (!deletePlan) return;
 
     try {
-      await axios.delete(
-        `http://localhost:3000/api/v1/subscriptionPlans/${deletePlan.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast({ title: "Plan deleted successfully!", duration: 5000, className: "bg-green-500 text-white" });
+      const url = `${API_URL}/api/v1/subscriptionPlans/${deletePlan.id}`;
+      console.log('Deleting plan at:', url);
+      
+      await axios.delete(url, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+      });
+      
+      console.log('Plan deleted successfully');
+      
+      toast({ 
+        title: "Success",
+        description: "Plan deleted successfully!",
+        className: "bg-green-500 text-white",
+        duration: 5000 
+      });
+      
       fetchPlans();
     } catch (err) {
       console.error("Error deleting plan", err);
-      toast({ title: "Error deleting plan", duration: 5000, className: "bg-red-500 text-white" });
+      const errorMessage = err.response?.data?.message || "Failed to delete plan. Please try again.";
+      toast({ 
+        title: "Error",
+        description: errorMessage,
+        className: "bg-red-500 text-white",
+        duration: 5000 
+      });
     } finally {
       setDeletePlan(null);
     }
@@ -201,7 +264,7 @@ const SubscriptionPlans: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <p>{plan.description}</p>
-                <p className="text-lg font-bold mt-2">${plan.price}/mo</p>
+                <p className="text-lg font-bold mt-2">₹{plan.price}/mo</p>
                 <p>Max Vehicles: {plan.maxVehicles}</p>
                 <p>Max Users: {plan.maxUsers}</p>
                 <p>Billing: {plan.durationDays} days</p>
@@ -283,7 +346,7 @@ const SubscriptionPlans: React.FC = () => {
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSavePlan} className="space-y-4">
+          <form onSubmit={handleSavePlan} id="plan-form" className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
@@ -353,6 +416,20 @@ const SubscriptionPlans: React.FC = () => {
             </div>
 
             <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  // Reset form fields
+                  const form = document.getElementById('plan-form') as HTMLFormElement;
+                  if (form) {
+                    form.reset();
+                  }
+                  setEditingPlan(null);
+                }}
+              >
+                Clear
+              </Button>
               <Button type="submit">
                 {editingPlan ? "Update Plan" : "Create Plan"}
               </Button>

@@ -10,6 +10,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface UserSummary {
   id: string;
   firstName: string;
@@ -60,21 +62,22 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
 
   const { toast } = useToast();
 
-  // Rider-related state
   const [riders, setRiders] = useState<UserSummary[]>([]);
   const [selectedRider, setSelectedRider] = useState<string>("");
 
-  // Vehicle-related state
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<string>("");
 
-  // Fetch riders + vehicles when modal opens
+  const [localJobs, setLocalJobs] = useState<JobSummary[]>(recentJobs);
+
+  useEffect(() => {
+    setLocalJobs(recentJobs);
+  }, [recentJobs]);
+
   useEffect(() => {
     if (assignModalOpen) {
       const token = localStorage.getItem("token");
-
-      // Fetch riders
-      fetch("http://localhost:3000/api/v1/users?role=rider", {
+      fetch(`${API_URL}/api/v1/users?role=rider`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -88,8 +91,7 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
         })
         .catch((err) => console.error("Failed to fetch riders", err));
 
-      // Fetch vehicles
-      fetch("http://localhost:3000/api/v1/vehicles", {
+      fetch(`${API_URL}/api/v1/vehicles`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -105,9 +107,8 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
     }
   }, [assignModalOpen]);
 
-  // Finds job ID based on title & customer name
   const findJobByTitleAndCustomer = (title: string, customerName: string): JobSummary | undefined => {
-    return recentJobs.find((job: JobSummary) => {
+    return localJobs.find((job: JobSummary) => {
       const fullName = job.allocator
         ? `${job.allocator.firstName} ${job.allocator.lastName}`
         : "";
@@ -116,14 +117,13 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
   };
 
   const handleOpenAssignModal = (job: JobSummary) => {
-    // Get job ID by matching title and customer name
     const customerName = job.allocator
       ? `${job.allocator.firstName} ${job.allocator.lastName}`
       : "";
     const foundJob = findJobByTitleAndCustomer(job.title, customerName);
 
     if (foundJob) {
-      setSelectedJob(foundJob); // store full job object
+      setSelectedJob(foundJob);
       setSelectedRider(foundJob.rider?.id || "");
       setSelectedVehicle(foundJob.vehicleId || "");
       setAssignModalOpen(true);
@@ -137,7 +137,7 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
 
     const token = localStorage.getItem("token");
 
-    fetch(`http://localhost:3000/api/v1/jobs/${selectedJob.id}/status`, {
+    fetch(`${API_URL}/api/v1/jobs/${selectedJob.id}/status`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -166,7 +166,14 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
           className: "bg-green-500 text-white",
         });
         setAssignModalOpen(false);
-        // Intentionally not auto-refreshing jobs to avoid showing All Jobs list automatically
+
+        setLocalJobs((prev) =>
+          prev.map((job) =>
+            job.id === selectedJob.id
+              ? { ...job, rider: riders.find((r) => r.id === selectedRider) || job.rider, vehicleId: selectedVehicle, status: "Assigned" }
+              : job
+          )
+        );
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : "An error occurred.";
@@ -212,10 +219,10 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
             </TableRow>
           </TableHeader>
           <TableBody>
-            {recentJobs.length > 0 ? (
-              recentJobs.map((job, index) => (
+            {localJobs.length > 0 ? (
+              localJobs.map((job, index) => (
                 <TableRow
-                  key={`${job.title}-${job.allocator?.firstName || ""}`}
+                  key={`${job.id}-${index}`}
                   className="hover:bg-muted/50"
                 >
                   <TableCell className="hidden md:table-cell">{index + 1}</TableCell>
@@ -260,7 +267,10 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
       <AddJobModal
         open={isAddJobOpen}
         onClose={() => setIsAddJobOpen(false)}
-        onJobAdded={fetchAllJobs}
+        onJobAdded={(newJob) => {
+          setLocalJobs((prev) => [newJob, ...prev]); // instant add
+          fetchAllJobs(); // still sync with backend
+        }}
       />
 
       {/* Assign Rider + Vehicle Modal */}

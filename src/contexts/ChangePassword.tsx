@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface ChangePasswordProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -38,21 +40,31 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ open, onOpenChange }) =
   const handleSubmit = async () => {
     if (!validate()) return;
     setIsSubmitting(true);
+    
+    const url = `${API_URL}/api/v1/auth/change-password`;
+    console.log('Changing password at:', url);
+    
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/api/v1/auth/change-password', {
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
 
-      const data = await res.json();
-      if (!res.ok || data?.success === false) {
-        throw new Error(data?.message || 'Failed to change password');
+      console.log('Change password response status:', res.status);
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData?.message || 'Failed to change password');
       }
+
+      const data = await res.json();
+      console.log('Password change successful');
 
       toast({
         title: 'Password updated',
@@ -68,6 +80,9 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ open, onOpenChange }) =
       const errorMessage = err instanceof Error 
         ? err.message 
         : 'Please verify your old password and try again.';
+      
+      console.error('Password change error:', errorMessage);
+      
       toast({
         title: 'Update failed',
         description: errorMessage,
@@ -108,19 +123,23 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ open, onOpenChange }) =
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Min 8 chars, upper, lower, number"
+              placeholder="Enter your new password"
             />
             {errors.newPassword && (
               <p className="text-xs text-destructive">{errors.newPassword}</p>
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save'}
+            <Button 
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isSubmitting ? 'Updating...' : 'Update Password'}
             </Button>
           </div>
         </div>
@@ -130,5 +149,3 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ open, onOpenChange }) =
 };
 
 export default ChangePassword;
-
-

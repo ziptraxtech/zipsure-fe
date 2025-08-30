@@ -73,24 +73,21 @@ const AllocatorDashboard: React.FC = () => {
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
 
-  // Assignment modal
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
-  // Rider & Vehicle state ✅
   const [riders, setRiders] = useState<Rider[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedRider, setSelectedRider] = useState<string>("");
   const [selectedVehicle, setSelectedVehicle] = useState<string>("");
 
-  // ✅ Analytics state
   const [analytics, setAnalytics] = useState<AnalyticsResponse["data"] | null>(null);
 
-  // Fetch jobs
   const fetchAllJobs = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:3000/api/v1/jobs", {
+      const url = `${import.meta.env.VITE_API_URL}/api/v1/jobs`;
+      const res = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -109,11 +106,11 @@ const AllocatorDashboard: React.FC = () => {
     }
   };
 
-  // Fetch analytics
   const fetchAnalytics = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:3000/api/v1/analytics/allocator", {
+      const url = `${import.meta.env.VITE_API_URL}/api/v1/analytics/allocator`;
+      const res = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -132,13 +129,11 @@ const AllocatorDashboard: React.FC = () => {
     fetchAnalytics();
   }, []);
 
-  // ✅ Fetch riders & vehicles when modal opens
   useEffect(() => {
     if (assignModalOpen) {
       const token = localStorage.getItem("token");
-
-      // Fetch riders
-      fetch("http://localhost:3000/api/v1/users?role=rider", {
+      const url = `${import.meta.env.VITE_API_URL}/api/v1/users?role=rider`;
+      fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -152,8 +147,8 @@ const AllocatorDashboard: React.FC = () => {
         })
         .catch((err) => console.error("Failed to fetch riders", err));
 
-      // Fetch vehicles
-      fetch("http://localhost:3000/api/v1/vehicles/organization", {
+      const vehicleUrl = `${import.meta.env.VITE_API_URL}/api/v1/vehicles/organization`;
+      fetch(vehicleUrl, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -176,31 +171,45 @@ const AllocatorDashboard: React.FC = () => {
     setAssignModalOpen(true);
   };
 
-  const handleConfirmAssign = () => {
+  const handleConfirmAssign = async () => {
     if (!selectedJob || !selectedRider || !selectedVehicle) return;
     const token = localStorage.getItem("token");
+    const url = `${import.meta.env.VITE_API_URL}/api/v1/jobs/${selectedJob.id}/status`;
+    
+    console.log('Updating job status at:', url);
+    
+    try {
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          riderId: selectedRider,
+          vehicleId: selectedVehicle,
+          status: "assigned"
+        }),
+      });
 
-    fetch(`http://localhost:3000/api/v1/jobs/${selectedJob.id}/status`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        riderId: selectedRider,
-        vehicleId: selectedVehicle,
-      }),
-    })
-      .then((res) => res.json())
-      .then(() => {
-        setAssignModalOpen(false);
-        fetchAllJobs();
-        fetchAnalytics(); // refresh analytics too
-      })
-      .catch((err) => console.error("Failed to update job", err));
+      console.log('Update response status:', res.status);
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update job status');
+      }
+
+      const data = await res.json();
+      console.log('Update successful:', data);
+      
+      fetchAllJobs();
+      setAssignModalOpen(false);
+      
+    } catch (error) {
+      console.error('Error updating job status:', error);
+    }
   };
 
-  // ✅ Build metrics dynamically from analytics API
   const metrics = analytics
     ? [
         {

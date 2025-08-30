@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface AddUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -33,13 +35,45 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
     firstName: "",
     lastName: "",
     phone: "",
-    role: "admin", // default role
+    role: "admin",
   });
 
-  const handleUserChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setUserData({ ...userData, [e.target.name]: e.target.value });
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateField = (name: string, value: string) => {
+    let error = "";
+
+    if (name === "email") {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        error = "Invalid email format";
+      }
+    }
+
+    if (name === "phone") {
+      if (!/^\d{10}$/.test(value)) {
+        error = "Phone number must be exactly 10 digits";
+      }
+    }
+
+    if (name === "password") {
+      const hasUppercase = /[A-Z]/.test(value);
+      const hasLowercase = /[a-z]/.test(value);
+      const hasNumber = /[0-9]/.test(value);
+    
+      if (value.length < 8 || !hasUppercase || !hasLowercase || !hasNumber) {
+        error =
+          "Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, and one number";
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, [name]: error }));
+  };
+
+  const handleUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setUserData({ ...userData, [name]: value });
+    validateField(name, value); 
   };
 
   const handleRoleChange = (value: string) => {
@@ -48,6 +82,19 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
   const handleSubmitUser = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    Object.entries(userData).forEach(([key, value]) => {
+      validateField(key, value);
+    });
+
+    if (Object.values(errors).some((err) => err)) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix all errors before submitting",
+        className: "bg-red-500/90 text-white rounded-lg shadow-lg px-4 py-3",
+      });
+      return;
+    }
 
     if (!organizationId) {
       toast({
@@ -59,10 +106,11 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
     }
 
     try {
+      setIsSubmitting(true);
       const token = localStorage.getItem("token");
       const localId = localStorage.getItem("id");
 
-      const res = await fetch("http://localhost:3000/api/v1/users", {
+      const res = await fetch(`${API_URL}/api/v1/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -109,16 +157,17 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
         localStorage.removeItem("id");
 
+        // Reset form and close dialog
         setUserData({
-          email: "",
-          password: "",
           firstName: "",
           lastName: "",
+          email: "",
+          password: "",
           phone: "",
-          role: "rider",
+          role: "admin",
         });
         onOpenChange(false);
-        onUserCreated?.();
+        onUserCreated?.(); // Call the callback to refresh the users table
       } else {
         toast({
           title: "Invalid Input",
@@ -133,6 +182,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
         description: "Something went wrong",
         className: "bg-red-500/90 text-white rounded-lg shadow-lg px-4 py-3",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -178,8 +229,11 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               placeholder="Email"
               value={userData.email}
               onChange={handleUserChange}
-              className="bg-gray-100"
+              className={`bg-gray-100 ${errors.email ? "border-red-500" : ""}`}
             />
+            {errors.email && (
+              <p className="text-red-500 text-sm">{errors.email}</p>
+            )}
           </div>
 
           <div className="grid gap-2">
@@ -191,8 +245,11 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               placeholder="Password"
               value={userData.password}
               onChange={handleUserChange}
-              className="bg-gray-100"
+              className={`bg-gray-100 ${errors.password ? "border-red-500" : ""}`}
             />
+            {errors.password && (
+              <p className="text-red-500 text-sm">{errors.password}</p>
+            )}
           </div>
 
           <div className="grid gap-2 ">
@@ -204,8 +261,11 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               placeholder="Phone"
               value={userData.phone}
               onChange={handleUserChange}
-              className="bg-gray-100"
+              className={`bg-gray-100 ${errors.phone ? "border-red-500" : ""}`}
             />
+            {errors.phone && (
+              <p className="text-red-500 text-sm">{errors.phone}</p>
+            )}
           </div>
 
           <div className="grid gap-2">
@@ -224,7 +284,25 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
           </div>
 
           <DialogFooter>
-            <Button type="submit">Save User</Button>
+          <Button
+              variant="secondary"
+              onClick={() => {
+                setUserData({
+                  firstName: "",
+                  lastName: "",
+                  email: "",
+                  password: "",
+                  phone: "",
+                  role: "admin",
+                });
+                setErrors({});
+              }}
+            >
+              Clear
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save User"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

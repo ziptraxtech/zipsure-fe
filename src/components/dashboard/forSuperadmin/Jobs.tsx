@@ -36,6 +36,8 @@ interface JobItem {
   createdAt?: string;
 }
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Jobs: React.FC = () => {
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -47,7 +49,7 @@ const Jobs: React.FC = () => {
 
   const fetchOrganizations = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/api/v1/organizations", {
+      const res = await axios.get(`${API_URL}/api/v1/organizations`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setOrganizations(res?.data?.data ?? []);
@@ -58,7 +60,7 @@ const Jobs: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/api/v1/users", {
+      const res = await axios.get(`${API_URL}/api/v1/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(res?.data?.data ?? []);
@@ -70,7 +72,7 @@ const Jobs: React.FC = () => {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:3000/api/v1/jobs/superadmin", {
+      const res = await axios.get(`${API_URL}/api/v1/jobs/superadmin`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data: JobItem[] = res?.data?.data ?? [];

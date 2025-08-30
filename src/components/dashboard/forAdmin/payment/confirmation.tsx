@@ -1,7 +1,9 @@
 import React from "react";
 import { X, Check } from "lucide-react";
 import axios from "axios";
-import { toast } from "sonner"; // for success/error notification
+import { toast } from "sonner";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface Plan {
   id: string;
@@ -18,7 +20,7 @@ interface SubscriptionConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   plan: Plan | null;
-  onConfirm?: (planId: string) => void; // not used anymore but kept for compatibility
+  onConfirm?: (planId: string) => void;  
   isLoading?: boolean;
 }
 
@@ -64,7 +66,6 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
 }) => {
   if (!isOpen || !plan) return null;
 
-  // ✅ load Razorpay SDK script dynamically
   const loadRazorpayScript = () =>
     new Promise<boolean>((resolve) => {
       if (document.getElementById("razorpay-sdk")) return resolve(true);
@@ -77,7 +78,6 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
       document.body.appendChild(script);
     });
 
-  // ✅ Verify payment with backend
   const verifyPayment = async (paymentData: RazorpayResponse, orderData: { amount: number; orderId?: string; id?: string }) => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -86,7 +86,7 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
 
     try {
       const verifyRes = await axios.post(
-        "http://localhost:3000/api/v1/payments/verify",
+        `${API_URL}/api/v1/payments/verify`,
         {
           razorpayOrderId: paymentData.razorpay_order_id,
           razorpayPaymentId: paymentData.razorpay_payment_id,
@@ -113,7 +113,6 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
     }
   };
 
-  // ✅ handle payment confirm
   const handleConfirm = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -125,8 +124,7 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
     }
 
     try {
-      // Step 1: Create subscription with plan ID
-      const subscriptionRes = await axios.post(`http://localhost:3000/api/v1/subscriptions`, {
+      const subscriptionRes = await axios.post(`${API_URL}/api/v1/subscriptions`, {
         planId: plan.id
       }, {
         headers: { Authorization: `Bearer ${token}` },
@@ -138,10 +136,9 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
 
       const { id, amount } = subscriptionRes.data.data;
 
-      // Step 2: Create payment order with subscription ID and amount
-      const paymentRes = await axios.post(`http://localhost:3000/api/v1/payments/create-order`, {
+      const paymentRes = await axios.post(`${API_URL}/api/v1/payments/create-order`, {
         subscriptionId: id,
-        amount: Number(amount) // Ensure amount is a number
+        amount: Number(amount) 
       },
        {
         headers: { Authorization: `Bearer ${token}` },
@@ -151,7 +148,6 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
         throw new Error(paymentRes.data?.message || "Failed to create payment order");
       }
 
-      // Load Razorpay for payment processing
       const res = await loadRazorpayScript();
       if (!res) {
         toast.error("Failed to load Razorpay. Please try again.", {
@@ -164,15 +160,14 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
       const orderData = paymentRes.data.data;
 
     const options = {
-      key: "rzp_live_4QS6rb1lpyfBXF", // 🔑 replace with manager's key later
-      amount: orderData.amount * 100, // convert to paise
+      key: "rzp_live_4QS6rb1lpyfBXF", 
+      amount: orderData.amount * 100, 
       currency: "INR",
       name: "Zipsure AI",
       description: `Subscription - ${plan.name}`,
       order_id: orderData.orderId || orderData.id,
       handler: async function (response: RazorpayResponse) {
         try {
-          // Step 3: Verify payment with backend
           const verificationResult = await verifyPayment(response, orderData);
           
           if (verificationResult.success) {
@@ -267,7 +262,7 @@ const Confirmation: React.FC<SubscriptionConfirmationModalProps> = ({
                   {plan.name}
                 </h3>
                 <p className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-1">
-                  ${parseFloat(plan.price).toFixed(2)}
+                ₹{parseFloat(plan.price).toFixed(2)}
                   <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">/mo</span>
                 </p>
               </div>

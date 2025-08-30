@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import SubscriptionConfirmationModal from './confirmation';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface Plan {
   id: string;
   name: string;
@@ -31,7 +33,6 @@ const Subscriptions = () => {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Fetch subscription plans
   const fetchPlans = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -41,7 +42,7 @@ const Subscriptions = () => {
     }
 
     try {
-      const res = await axios.get("http://localhost:3000/api/v1/subscriptions/plans", {
+      const res = await axios.get(`${API_URL}/api/v1/subscriptions/plans`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -77,8 +78,7 @@ const Subscriptions = () => {
 
     setIsProcessing(true);
     try {
-      // Step 1: Create subscription with plan ID
-      const subscriptionRes = await axios.post(`http://localhost:3000/api/v1/subscriptions`, {
+      const subscriptionRes = await axios.post(`${API_URL}/api/v1/subscriptions`, {
         planId: planId
       }, {
         headers: { Authorization: `Bearer ${token}` },
@@ -90,10 +90,9 @@ const Subscriptions = () => {
 
       const { subscriptionId, amount } = subscriptionRes.data.data;
 
-      // Step 2: Create payment order with subscription ID and amount
-      const paymentRes = await axios.post(`http://localhost:3000/api/v1/payments/create-order`, {
+      const paymentRes = await axios.post(`${API_URL}/api/v1/payments/create-order`, {
         subscriptionId: subscriptionId,
-        amount: Number(amount) // Ensure amount is a number
+        amount: Number(amount)
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -102,11 +101,9 @@ const Subscriptions = () => {
         throw new Error(paymentRes.data?.message || "Failed to create payment order");
       }
 
-      // Handle successful subscription and payment order creation
       alert('Subscription and payment order created successfully!');
       console.log('Payment order data:', paymentRes.data.data);
       
-      // Refresh the plans to get updated data
       await fetchPlans();
       handleCloseModal();
     } catch (err: unknown) {
@@ -181,7 +178,7 @@ const Subscriptions = () => {
                   <div>
                     <CardTitle className="text-xl">{plan.name}</CardTitle>
                     <p className="text-3xl font-bold mt-2">
-                      ${parseFloat(plan.price).toFixed(2)}
+                    ₹{parseFloat(plan.price).toFixed(2)}
                       <span className="text-sm text-muted-foreground font-normal">/mo</span>
                     </p>
                   </div>
