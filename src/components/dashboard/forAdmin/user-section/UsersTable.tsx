@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,15 +55,53 @@ const UsersTable: React.FC<UsersTableProps> = ({
     role: "admin",
   });
 
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const { toast } = useToast();
 
-  // Pagination state
+  const [localUsers, setLocalUsers] = useState<User[]>(users);
+
+  useEffect(() => {
+    setLocalUsers(users);
+  }, [users]);
+
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
-  const totalPages = Math.ceil(users.length / usersPerPage);
+  const totalPages = Math.ceil(localUsers.length / usersPerPage);
+
+  const validateField = (name: string, value: string) => {
+    let error = "";
+    if (name === "email") {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!value) error = "Email is required";
+      else if (!emailRegex.test(value)) error = "Invalid email format";
+    }
+    if (name === "password") {
+      const hasUppercase = /[A-Z]/.test(value);
+      const hasLowercase = /[a-z]/.test(value);
+      const hasNumber = /[0-9]/.test(value);
+    
+      if (value.length < 8 || !hasUppercase || !hasLowercase || !hasNumber) {
+        error =
+          "Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, and one number";
+      }
+    }
+    if (name === "phone") {
+      const phoneRegex = /^[0-9]{10}$/;
+      if (value && !phoneRegex.test(value)) error = "Invalid phone number";
+    }
+    if (name === "firstName" && !value) {
+      error = "First name is required";
+    }
+    if (name === "lastName" && !value) {
+      error = "Last name is required";
+    }
+    setErrors((prev) => ({ ...prev, [name]: error }));
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewUser({ ...newUser, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setNewUser({ ...newUser, [name]: value });
+    validateField(name, value);
   };
 
   const handleRoleChange = (value: string) => {
@@ -71,6 +109,18 @@ const UsersTable: React.FC<UsersTableProps> = ({
   };
 
   const handleSubmit = async () => {
+    Object.entries(newUser).forEach(([key, value]) => validateField(key, value));
+    const hasErrors = Object.values(errors).some((err) => err);
+    if (hasErrors) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix all validation errors before submitting.",
+        className: "bg-red-500 text-white",
+        duration: 5000,
+      });
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -83,8 +133,10 @@ const UsersTable: React.FC<UsersTableProps> = ({
         return;
       }
 
-      await axios.post(
-        "http://localhost:3000/api/v1/users",
+      const API_URL = import.meta.env.VITE_API_URL;
+
+      const res = await axios.post(
+        `${API_URL}/api/v1/users`,
         {
           email: newUser.email,
           password: newUser.password,
@@ -101,6 +153,14 @@ const UsersTable: React.FC<UsersTableProps> = ({
         }
       );
 
+      const createdUser: User = res.data.data || {
+        ...newUser,
+        id: Date.now().toString(),
+        isActive: true,
+      };
+
+      setLocalUsers((prev) => [...prev, createdUser]);
+
       toast({
         title: "Success",
         description: "User created successfully!",
@@ -116,15 +176,15 @@ const UsersTable: React.FC<UsersTableProps> = ({
         phone: "",
         role: "admin",
       });
+      setErrors({});
 
       if (onRefresh) {
-        await onRefresh();
-        setCurrentPage(Math.ceil((users.length + 1) / usersPerPage));
+        onRefresh();
       }
+      setCurrentPage(Math.ceil((localUsers.length + 1) / usersPerPage));
     } catch (error: any) {
       console.error(error);
       const status = error.response?.status;
-
       if (status === 500) {
         toast({
           title: "Error",
@@ -135,22 +195,20 @@ const UsersTable: React.FC<UsersTableProps> = ({
       } else if (error.response?.status === 400) {
         const errorData = error.response.data;
         let errorMessage = "Invalid input";
-        
         if (errorData.details && Array.isArray(errorData.details)) {
           errorMessage = errorData.details
             .map((d: any) => `${d.field || 'Field'}: ${d.message || 'Invalid value'}`)
             .join("\n");
         } else if (errorData.message) {
           errorMessage = errorData.message;
-        } else if (typeof errorData === 'string') {
+        } else if (typeof errorData === "string") {
           errorMessage = errorData;
         }
-        
         toast({
           title: "Input Error",
           description: errorMessage,
           className: "bg-red-500 text-white whitespace-pre-line",
-          duration: 5000,
+          duration: 7000,
         });
       } else {
         toast({
@@ -163,10 +221,9 @@ const UsersTable: React.FC<UsersTableProps> = ({
     }
   };
 
-  // Pagination logic
   const startIndex = (currentPage - 1) * usersPerPage;
   const endIndex = startIndex + usersPerPage;
-  const currentUsers = users.slice(startIndex, endIndex);
+  const currentUsers = localUsers.slice(startIndex, endIndex);
 
   return (
     <>
@@ -209,34 +266,27 @@ const UsersTable: React.FC<UsersTableProps> = ({
             <TableBody>
               {currentUsers.length > 0 ? (
                 currentUsers.map((user, index) => (
-                  <TableRow
-                    key={user.id}
-                    className="hover:bg-muted/40"
-                  >
+                  <TableRow key={user.id} className="hover:bg-muted/40">
                     <TableCell className="hidden md:table-cell">{startIndex + index + 1}</TableCell>
-                    <TableCell className="whitespace-normal break-words max-w-[180px] md:max-w-none">
-                      {(user.firstName || "—") + " " + (user.lastName || "—")}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell whitespace-normal break-words">{user.email || "—"}</TableCell>
-                    <TableCell className="hidden md:table-cell whitespace-normal break-words">{user.phone || "—"}</TableCell>
-                    <TableCell className="capitalize whitespace-normal break-words">{user.role || "—"}</TableCell>
+                    <TableCell>{(user.firstName || "—") + " " + (user.lastName || "—")}</TableCell>
+                    <TableCell className="hidden md:table-cell">{user.email || "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell">{user.phone || "—"}</TableCell>
+                    <TableCell className="capitalize">{user.role || "—"}</TableCell>
                     <TableCell>
-                    <Badge variant="outline" className={`capitalize ${
+                      <Badge
+                        variant="outline"
+                        className={`capitalize ${
                           user.isActive ? "text-green-500 border-green-500" : "text-red-500 border-red-500"
-                          }`}
-                            >
-                      {user.isActive ? "Active" : "Inactive"}
-                    </Badge>
+                        }`}
+                      >
+                        {user.isActive ? "Active" : "Inactive"}
+                      </Badge>
                     </TableCell>
-
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="p-4 text-center text-muted-foreground"
-                  >
+                  <TableCell colSpan={6} className="p-4 text-center text-muted-foreground">
                     {loading ? "Loading users..." : "No users found"}
                   </TableCell>
                 </TableRow>
@@ -244,13 +294,8 @@ const UsersTable: React.FC<UsersTableProps> = ({
             </TableBody>
           </Table>
 
-          {/* Pagination buttons */}
           <div className="flex justify-center gap-2 mt-4">
-            <Button
-              size="sm"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => prev - 1)}
-            >
+            <Button size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((prev) => prev - 1)}>
               Previous
             </Button>
             <span className="px-2 py-1 text-sm font-medium">
@@ -267,7 +312,6 @@ const UsersTable: React.FC<UsersTableProps> = ({
         </CardContent>
       </Card>
 
-      {/* Add User Modal */}
       <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
@@ -281,9 +325,10 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 name="firstName"
                 value={newUser.firstName}
                 onChange={handleInputChange}
-                className="bg-gray-100"
+                className={`bg-gray-100 ${errors.firstName ? "border-red-500" : ""}`}
                 required
               />
+              {errors.firstName && <p className="text-red-500 text-sm">{errors.firstName}</p>}
             </div>
             <div>
               <Label className="mb-4 block">Last Name</Label>
@@ -291,9 +336,10 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 name="lastName"
                 value={newUser.lastName}
                 onChange={handleInputChange}
-                className="bg-gray-100"
+                className={`bg-gray-100 ${errors.lastName ? "border-red-500" : ""}`}
                 required
               />
+              {errors.lastName && <p className="text-red-500 text-sm">{errors.lastName}</p>}
             </div>
 
             <div>
@@ -303,9 +349,10 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 name="email"
                 value={newUser.email}
                 onChange={handleInputChange}
-                className="bg-gray-100"
+                className={`bg-gray-100 ${errors.email ? "border-red-500" : ""}`}
                 required
               />
+              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
             </div>
             <div>
               <Label className="mb-4 block">Password</Label>
@@ -314,9 +361,10 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 name="password"
                 value={newUser.password}
                 onChange={handleInputChange}
-                className="bg-gray-100"
+                className={`bg-gray-100 ${errors.password ? "border-red-500" : ""}`}
                 required
               />
+              {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
             </div>
 
             <div>
@@ -325,8 +373,9 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 name="phone"
                 value={newUser.phone}
                 onChange={handleInputChange}
-                className="bg-gray-100"
+                className={`bg-gray-100 ${errors.phone ? "border-red-500" : ""}`}
               />
+              {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
             </div>
             <div>
               <Label className="mb-4 block">Role</Label>
@@ -346,7 +395,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
           <DialogFooter className="mt-4 flex justify-end gap-2">
             <Button
               variant="secondary"
-              onClick={() =>
+              onClick={() => {
                 setNewUser({
                   firstName: "",
                   lastName: "",
@@ -354,8 +403,9 @@ const UsersTable: React.FC<UsersTableProps> = ({
                   password: "",
                   phone: "",
                   role: "admin",
-                })
-              }
+                });
+                setErrors({});
+              }}
             >
               Clear
             </Button>

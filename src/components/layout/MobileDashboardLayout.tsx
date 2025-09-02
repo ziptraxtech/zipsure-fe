@@ -42,15 +42,10 @@ import {
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
-// ✅ Admin subscriptions
 import Subscriptions from '@/components/dashboard/forAdmin/payment/subscriptions';
-// ✅ Superadmin subscription plans
 import SubscriptionPlans from '@/components/dashboard/forSuperadmin/SubscriptionPlans';
-// ✅ Change password
 import ChangePassword from '@/contexts/ChangePassword';
-// ✅ Superadmin jobs
 import Jobs from '@/components/dashboard/forSuperadmin/Jobs';
-// ✅ Rider jobs
 import RiderJobs from '@/components/dashboard/forRider/Jobs-rider';
 
 interface MobileDashboardLayoutProps {
@@ -78,7 +73,7 @@ type ActiveView =
   | 'tracking'
   | 'reports'
   | 'history'
-  | 'jobs-rider'; // ✅ Added missing view
+  | 'jobs-rider';
 
 interface NavigationItem {
   id: string;
@@ -95,7 +90,6 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
   const isCollapsed = state === 'collapsed';
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
 
-  // ✅ Get user info from localStorage
   const localUser = (() => {
     try {
       const stored = localStorage.getItem("user");
@@ -111,7 +105,6 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
       : user?.name || "User";
 
   const handleNavigation = (view: ActiveView, scrollTo?: string) => {
-    // Handle scrolling to specific sections
     if (scrollTo) {
       const element = document.getElementById(scrollTo);
       if (element) {
@@ -120,7 +113,6 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
       }
     }
     
-    // Handle special case for organizations (legacy support)
     if (view === "organizations" && orgRef.current) {
       orgRef.current.scrollIntoView({ behavior: "smooth" });
       return;
@@ -131,7 +123,6 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
   };
 
   const getNavigationItems = (): NavigationItem[] => {
-    // Get role-specific dashboard ID
     const getDashboardId = () => {
       switch (user?.role) {
         case 'superadmin': return 'dashboard-top';
@@ -171,7 +162,7 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
       case 'rider':
         return [
           ...baseItems,
-          { id: 'jobs', label: 'All Jobs', icon: ClipboardList, url: '/jobs-rider', view: 'jobs-rider' }, // ✅ corrected
+          { id: 'jobs', label: 'All Jobs', icon: ClipboardList, url: '/jobs-rider', view: 'jobs-rider' },
         ];
       
       default:
@@ -194,8 +185,8 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
   };
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader>
+    <Sidebar variant="inset" collapsible="icon" className="flex flex-col h-full">
+      <SidebarHeader className="shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-1.5 rounded-lg">
             <img src={logo} alt="Logo" className="h-10 w-10 object-contain" />
@@ -208,7 +199,7 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="flex-1 overflow-y-auto">
         {/* User Info */}
         {!isCollapsed && user && (
           <SidebarGroup>
@@ -236,7 +227,7 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
         )}
 
         {/* Navigation */}
-        <SidebarGroup>
+        <SidebarGroup className="mb-4">
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -259,30 +250,34 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
-        {!isCollapsed && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+      <SidebarFooter className="border-t pt-2 mt-auto">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            {isCollapsed ? (
+              <Button variant="ghost" size="icon" className="w-full">
+                <Settings className="h-5 w-5" />
+              </Button>
+            ) : (
               <Button variant="outline" className="w-full justify-start gap-3">
                 <Settings className="h-4 w-4" />
                 Account
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onOpenChangePassword}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onOpenChangePassword}>
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout} className="text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );
@@ -338,38 +333,44 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
 
   return (
     <SidebarProvider>
-      <AppSidebar onViewChange={setActiveView} orgRef={orgRef} onOpenChangePassword={() => setIsChangePasswordOpen(true)} />
-      <SidebarInset>
-        {/* Header */}
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4 w-full">
-            <SidebarTrigger className="-ml-1" />
-            
-            <div className="flex items-center gap-2 lg:hidden">
-              <div className="p-1 rounded-md">
-                <img src={logo} alt="Logo" className="h-5 w-5 object-contain" />
+      <div className="flex w-screen h-screen overflow-hidden">
+        <AppSidebar 
+          onViewChange={setActiveView} 
+          orgRef={orgRef} 
+          onOpenChangePassword={() => setIsChangePasswordOpen(true)} 
+        />
+        <SidebarInset className="flex-1 flex flex-col h-full w-full overflow-hidden">
+          {/* Header */}
+          <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b">
+            <div className="flex items-center gap-2 px-4 w-full">
+              <SidebarTrigger className="-ml-1" />
+              
+              <div className="flex items-center gap-2 lg:hidden">
+                <div className="p-1 rounded-md">
+                  <img src={logo} alt="Logo" className="h-5 w-5 object-contain" />
+                </div>
+                <span className="font-semibold text-sm">Zipsure AI</span>
               </div>
-              <span className="font-semibold text-sm">Zipsure AI</span>
+              
+              <div className="ml-auto flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
             </div>
-            
-            <div className="ml-auto flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-            </div>
+          </header>
+
+          {/* Main Content */}
+          <div className="flex-1 p-4 pt-0 overflow-y-auto">
+            {renderContent()}
           </div>
-        </header>
 
-        {/* Main Content */}
-        <div className="flex-1 p-4 pt-0">
-          {renderContent()}
-        </div>
-
-        {/* Change Password Modal */}
-        <ChangePassword open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
-      </SidebarInset>
+          {/* Change Password Modal */}
+          <ChangePassword open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen} />
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 };

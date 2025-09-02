@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface AddUserModalProps {
   open: boolean;
   onClose: () => void;
-  onUserAdded: () => void;
+  onUserAdded: (newUser: any) => void;
 }
 
 const AddUserModal: React.FC<AddUserModalProps> = ({ open, onClose, onUserAdded }) => {
@@ -29,32 +31,32 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ open, onClose, onUserAdded 
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async () => {
-    const token = localStorage.getItem("token"); // get token
-    if (!token) {
-      setError("You are not authenticated.");
-      return;
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      await axios.post("http://localhost:3000/api/v1/users", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await axios.post(
+        `${API_URL}/api/v1/users`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      onUserAdded();
+      onUserAdded(res.data);
+
       onClose();
-      setFormData({
-        username: "",
-        prize: "",
-      });
+      setFormData({ username: "", prize: "" });
     } catch (err: any) {
       console.error("Error adding user:", err);
-      if (err.response && err.response.data && err.response.data.message) {
+      if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {
         setError("Something went wrong while adding the user.");
@@ -72,6 +74,21 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ open, onClose, onUserAdded 
         </DialogHeader>
 
         {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+
+        <div className="space-y-3">
+          <Input
+            placeholder="Username"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+          />
+          <Input
+            placeholder="Prize"
+            name="prize"
+            value={formData.prize}
+            onChange={handleChange}
+          />
+        </div>
 
         <DialogFooter className="mt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>

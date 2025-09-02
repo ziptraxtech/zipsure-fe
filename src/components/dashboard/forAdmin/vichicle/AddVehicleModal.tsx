@@ -19,10 +19,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface AddVehicleModalProps {
   open: boolean;
   onClose: () => void;
-  onVehicleAdded: () => void;
+  onVehicleAdded: (vehicle: any) => void;
 }
 
 const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
@@ -41,19 +43,99 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
     color: "",
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
+
+  const validateField = (name: string, value: string) => {
+    let error = "";
+    const currentYear = new Date().getFullYear();
+
+    if (name === "vehicleNumber") {
+      if (!value.trim()) {
+        error = "Vehicle number is required";
+      } else if (
+        !/^[A-Za-z]{2}\s?[0-9]{1,2}\s?[A-Za-z]{0,3}\s?[0-9]{4}$/i.test(value)
+      ) {
+        error = "Enter a valid vehicle number (e.g., MH 12 AB 1234)";
+      }
+    } else if (name === "model") {
+      if (!value.trim()) {
+        error = "Model is required";
+      }
+    } else if (name === "make") {
+      if (!value.trim()) {
+        error = "Make is required";
+      }
+    } else if (name === "year") {
+      if (!value) {
+        error = "Year is required";
+      } else if (
+        isNaN(Number(value)) ||
+        Number(value) < 1980 ||
+        Number(value) > currentYear
+      ) {
+        error = `Year must be between 1980 and ${currentYear}`;
+      }
+    } else if (name === "color") {
+      if (!value.trim()) {
+        error = "Color is required";
+      }
+    }
+
+    return error;
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (touched[name]) {
+      const error = validateField(name, value);
+      setErrors((prev) => ({ ...prev, [name]: error }));
+    }
   };
 
   const handleVehicleTypeChange = (value: string) => {
-    setFormData({ ...formData, vehicleType: value });
+    setFormData((prev) => ({ ...prev, vehicleType: value }));
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    let isValid = true;
+
+    Object.keys(formData).forEach((key) => {
+      if (key !== "vehicleType") {
+        const error = validateField(key, formData[key as keyof typeof formData]);
+        if (error) {
+          newErrors[key] = error;
+          isValid = false;
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return isValid;
   };
 
   const handleSubmit = async () => {
+    const touchedFields = Object.keys(formData).reduce((acc, key) => {
+      acc[key] = true;
+      return acc;
+    }, {} as Record<string, boolean>);
+    setTouched(touchedFields);
+
+    if (!validateForm()) {
+      return;
+    }
+
     const token = localStorage.getItem("token");
     if (!token) {
       toast({
@@ -91,13 +173,20 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
         year: enteredYear,
       };
 
-      await axios.post("http://localhost:3000/api/v1/vehicles", payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.post(
+        `${API_URL}/api/v1/vehicles`,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      onVehicleAdded();
+      // ✅ pass the new vehicle back immediately
+      onVehicleAdded(response.data.data);
+
       onClose();
       setFormData({
         vehicleNumber: "",
@@ -127,22 +216,25 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
         } else if (err.response?.status === 400) {
           const errorData = err.response.data;
           let errorMessage = "Invalid input";
-          
+
           if (errorData.details && Array.isArray(errorData.details)) {
             errorMessage = errorData.details
-              .map((d: any) => `${d.field || 'Field'}: ${d.message || 'Invalid value'}`)
+              .map(
+                (d: any) =>
+                  `${d.field || "Field"}: ${d.message || "Invalid value"}`
+              )
               .join("\n");
           } else if (errorData.message) {
             errorMessage = errorData.message;
-          } else if (typeof errorData === 'string') {
+          } else if (typeof errorData === "string") {
             errorMessage = errorData;
           }
 
           toast({
-            title: errorData.title || "Input Error",
+            title: "Input Error",
             description: errorMessage,
             className: "bg-red-500 text-white whitespace-pre-line",
-            duration: 5000,
+            duration: 7000,
           });
         } else {
           toast({
@@ -179,8 +271,18 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
               name="vehicleNumber"
               value={formData.vehicleNumber}
               onChange={handleChange}
-              className="bg-gray-100"
+              onBlur={handleBlur}
+              className={`bg-gray-100 ${
+                touched.vehicleNumber && errors.vehicleNumber
+                  ? "border-red-500"
+                  : ""
+              }`}
             />
+            {touched.vehicleNumber && errors.vehicleNumber && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.vehicleNumber}
+              </p>
+            )}
           </div>
 
           <div>
@@ -208,8 +310,14 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
               name="model"
               value={formData.model}
               onChange={handleChange}
-              className="bg-gray-100"
+              onBlur={handleBlur}
+              className={`bg-gray-100 ${
+                touched.model && errors.model ? "border-red-500" : ""
+              }`}
             />
+            {touched.model && errors.model && (
+              <p className="text-red-500 text-xs mt-1">{errors.model}</p>
+            )}
           </div>
 
           <div>
@@ -218,8 +326,14 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
               name="make"
               value={formData.make}
               onChange={handleChange}
-              className="bg-gray-100"
+              onBlur={handleBlur}
+              className={`bg-gray-100 ${
+                touched.make && errors.make ? "border-red-500" : ""
+              }`}
             />
+            {touched.make && errors.make && (
+              <p className="text-red-500 text-xs mt-1">{errors.make}</p>
+            )}
           </div>
 
           <div>
@@ -229,8 +343,14 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
               type="number"
               value={formData.year}
               onChange={handleChange}
-              className="bg-gray-100"
+              onBlur={handleBlur}
+              className={`bg-gray-100 ${
+                touched.year && errors.year ? "border-red-500" : ""
+              }`}
             />
+            {touched.year && errors.year && (
+              <p className="text-red-500 text-xs mt-1">{errors.year}</p>
+            )}
           </div>
 
           <div>
@@ -239,12 +359,34 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
               name="color"
               value={formData.color}
               onChange={handleChange}
-              className="bg-gray-100"
+              onBlur={handleBlur}
+              className={`bg-gray-100 ${
+                touched.color && errors.color ? "border-red-500" : ""
+              }`}
             />
+            {touched.color && errors.color && (
+              <p className="text-red-500 text-xs mt-1">{errors.color}</p>
+            )}
           </div>
         </div>
 
         <DialogFooter className="mt-4 flex justify-end gap-2">
+          <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setFormData({
+                            vehicleNumber: "",
+                            vehicleType: "Bike",
+                            model: "",
+                            make: "",
+                            year: "",
+                            color: "",
+                          });
+                          setErrors({});
+                        }}
+                      >
+                        Clear
+                      </Button>
           <Button onClick={handleSubmit} disabled={loading}>
             {loading ? "Adding..." : "Add Vehicle"}
           </Button>

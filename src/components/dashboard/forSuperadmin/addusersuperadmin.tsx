@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Plus } from "lucide-react"; // ✅ Removed Eye since no refresh button
+import { Users, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,10 +20,18 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-// Super Admin User type
+const API_URL = import.meta.env.VITE_API_URL;
+
 export interface SuperAdminUser {
   id: string;
   firstName: string;
@@ -48,15 +56,45 @@ const AddUserSuperAdmin: React.FC = () => {
     role: "admin",
   });
 
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const { toast } = useToast();
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
   const totalPages = Math.ceil(users.length / usersPerPage);
 
+  const validateField = (name: string, value: string) => {
+    let error = "";
+
+    if (name === "phone") {
+      if (!/^\d{10}$/.test(value)) {
+        error = "Phone number must be exactly 10 digits";
+      }
+    }
+
+    if (name === "email") {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        error = "Invalid email format";
+      }
+    }
+    if (name === "password") {
+      const hasUppercase = /[A-Z]/.test(value);
+      const hasLowercase = /[a-z]/.test(value);
+      const hasNumber = /[0-9]/.test(value);
+    
+      if (value.length < 8 || !hasUppercase || !hasLowercase || !hasNumber) {
+        error =
+          "Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, and one number";
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, [name]: error }));
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewUser({ ...newUser, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setNewUser({ ...newUser, [name]: value });
+    validateField(name, value);
   };
 
   const handleRoleChange = (value: string) => {
@@ -64,6 +102,20 @@ const AddUserSuperAdmin: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    Object.entries(newUser).forEach(([key, value]) => {
+      validateField(key, value);
+    });
+
+    if (Object.values(errors).some((err) => err)) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix all errors before submitting",
+        className: "bg-red-500 text-white",
+        duration: 5000,
+      });
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -76,8 +128,8 @@ const AddUserSuperAdmin: React.FC = () => {
         return;
       }
 
-      await axios.post(
-        "http://localhost:3000/api/v1/users",
+      const res = await axios.post(
+        `${API_URL}/api/v1/auth/register`,
         {
           email: newUser.email,
           password: newUser.password,
@@ -94,12 +146,17 @@ const AddUserSuperAdmin: React.FC = () => {
         }
       );
 
+      const createdUser: SuperAdminUser = res.data.data; // take new user from response
+
       toast({
         title: "Success",
         duration: 5000,
         description: "User created successfully!",
         className: "bg-green-500 text-white",
       });
+
+      setUsers((prev) => [...prev, createdUser]);
+      await fetchUsers();
 
       setIsAddUserOpen(false);
       setNewUser({
@@ -110,9 +167,8 @@ const AddUserSuperAdmin: React.FC = () => {
         phone: "",
         role: "admin",
       });
+      setErrors({});
 
-      // Refresh users list (Super Admin version)
-      fetchUsers();
       setCurrentPage(Math.ceil((users.length + 1) / usersPerPage));
     } catch (error: any) {
       console.error(error);
@@ -126,11 +182,27 @@ const AddUserSuperAdmin: React.FC = () => {
           duration: 5000,
         });
       } else if (status === 400) {
+        const errorData = error.response.data;
+        let errorMessage = "Invalid input";
+
+        if (errorData.details && Array.isArray(errorData.details)) {
+          errorMessage = errorData.details
+            .map(
+              (d: any) =>
+                `${d.field || "Field"}: ${d.message || "Invalid value"}`
+            )
+            .join("\n");
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (typeof errorData === "string") {
+          errorMessage = errorData;
+        }
+
         toast({
-          title: "Error",
-          description: "Wrong input.",
-          className: "bg-red-500 text-white",
-          duration: 5000,
+          title: "Input Error",
+          description: errorMessage,
+          className: "bg-red-500 text-white whitespace-pre-line",
+          duration: 7000,
         });
       } else {
         toast({
@@ -140,17 +212,16 @@ const AddUserSuperAdmin: React.FC = () => {
           duration: 5000,
         });
       }
-    } 
+    }
   };
 
-  // Fetch users for Super Admin
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const res = await axios.get("http://localhost:3000/api/v1/users", {
+      const res = await axios.get(`${API_URL}/api/v1/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -168,7 +239,6 @@ const AddUserSuperAdmin: React.FC = () => {
     fetchUsers();
   }, []);
 
-  // Pagination logic
   const startIndex = (currentPage - 1) * usersPerPage;
   const endIndex = startIndex + usersPerPage;
   const currentUsers = users.slice(startIndex, endIndex);
@@ -204,25 +274,48 @@ const AddUserSuperAdmin: React.FC = () => {
               {currentUsers.length > 0 ? (
                 currentUsers.map((user, index) => (
                   <TableRow key={user.id} className="hover:bg-muted/40">
-                    <TableCell className="hidden md:table-cell whitespace-normal break-words">{startIndex + index + 1}</TableCell>
-                    <TableCell className="whitespace-normal break-words max-w-[180px] md:max-w-none">
-                      {(user.firstName || "—") + " " + (user.lastName || "—")}
+                    <TableCell className="hidden md:table-cell whitespace-normal break-words">
+                      {startIndex + index + 1}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell whitespace-normal break-words">{user.email || "—"}</TableCell>
-                    <TableCell className="hidden md:table-cell whitespace-normal break-words">{user.phone || "—"}</TableCell>
-                    <TableCell className="capitalize whitespace-normal break-words">{user.role || "—"}</TableCell>
+                    <TableCell className="whitespace-normal break-words max-w-[180px] md:max-w-none">
+                      {(user.firstName || "—") +
+                        " " +
+                        (user.lastName || "—")}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell whitespace-normal break-words">
+                      {user.email || "—"}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell whitespace-normal break-words">
+                      {user.phone || "—"}
+                    </TableCell>
+                    <TableCell className="capitalize whitespace-normal break-words">
+                      {user.role || "—"}
+                    </TableCell>
                     <TableCell>
                       {user.isActive ? (
-                        <Badge variant="outline" className="text-success border-success">Active</Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-success border-success"
+                        >
+                          Active
+                        </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-destructive border-destructive">Inactive</Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-destructive border-destructive"
+                        >
+                          Inactive
+                        </Badge>
                       )}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="p-4 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={6}
+                    className="p-4 text-center text-muted-foreground"
+                  >
                     {loading ? "Loading users..." : "No users found"}
                   </TableCell>
                 </TableRow>
@@ -289,9 +382,14 @@ const AddUserSuperAdmin: React.FC = () => {
                 name="email"
                 value={newUser.email}
                 onChange={handleInputChange}
-                className="bg-gray-100"
+                className={`bg-gray-100 ${
+                  errors.email ? "border-red-500" : ""
+                }`}
                 required
               />
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email}</p>
+              )}
             </div>
             <div>
               <Label className="mb-4 block">Password</Label>
@@ -300,9 +398,14 @@ const AddUserSuperAdmin: React.FC = () => {
                 name="password"
                 value={newUser.password}
                 onChange={handleInputChange}
-                className="bg-gray-100"
+                className={`bg-gray-100 ${
+                  errors.password ? "border-red-500" : ""
+                }`}
                 required
               />
+              {errors.password && (
+                <p className="text-red-500 text-sm">{errors.password}</p>
+              )}
             </div>
 
             <div>
@@ -311,8 +414,13 @@ const AddUserSuperAdmin: React.FC = () => {
                 name="phone"
                 value={newUser.phone}
                 onChange={handleInputChange}
-                className="bg-gray-100"
+                className={`bg-gray-100 ${
+                  errors.phone ? "border-red-500" : ""
+                }`}
               />
+              {errors.phone && (
+                <p className="text-red-500 text-sm">{errors.phone}</p>
+              )}
             </div>
             <div>
               <Label className="mb-4 block">Role</Label>
@@ -333,16 +441,17 @@ const AddUserSuperAdmin: React.FC = () => {
           <DialogFooter className="mt-4 flex justify-end gap-2">
             <Button
               variant="secondary"
-              onClick={() =>
+              onClick={() => {
                 setNewUser({
                   firstName: "",
                   lastName: "",
                   email: "",
                   password: "",
                   phone: "",
-                  role: "superadmin",
-                })
-              }
+                  role: "superAdmin",
+                });
+                setErrors({});
+              }}
             >
               Clear
             </Button>

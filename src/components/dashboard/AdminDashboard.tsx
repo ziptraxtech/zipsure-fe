@@ -10,6 +10,8 @@ import AllJobsModal from "./forAdmin/jobs/AllJobsModal";
 import AddVehicleModal from "./forAdmin/vichicle/AddVehicleModal"; 
 import GetAllVehicles from "./forAdmin/vichicle/GetAllVehicles";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface JobSummary {
   id: string;
   title: string;
@@ -52,11 +54,10 @@ const AdminDashboard = () => {
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [isViewVehiclesModalOpen, setIsViewVehiclesModalOpen] = useState(false);
 
-  // ✅ Fetch organisation name by ID
   const fetchOrganisationName = async (orgId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`http://localhost:3000/api/v1/organisations/${orgId}`, {
+      const res = await axios.get(`${API_URL}/api/v1/organisations/${orgId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.success && res.data.data?.name) {
@@ -67,11 +68,10 @@ const AdminDashboard = () => {
     }
   };
 
-  // ✅ Fetch users separately
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:3000/api/v1/users", {
+      const res = await axios.get(`${API_URL}/api/v1/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.success && Array.isArray(res.data.data)) {
@@ -82,11 +82,10 @@ const AdminDashboard = () => {
     }
   };
 
-  // ✅ Fetch dashboard data
   const fetchDashboardData = async () => {
     const token = localStorage.getItem("token");
     try {
-      const res = await axios.get("http://localhost:3000/api/v1/analytics/admin", {
+      const res = await axios.get(`${API_URL}/api/v1/analytics/admin`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data?.success && res.data.data?.overview) {
@@ -97,7 +96,6 @@ const AdminDashboard = () => {
         setTotalVehicles(totalVehicles || 0);
         if (jobStatuses) setJobStatuses(jobStatuses);
 
-        // ✅ Fetch organisation name using ID
         if (organizationId) {
           await fetchOrganisationName(organizationId);
         }
@@ -127,7 +125,7 @@ const AdminDashboard = () => {
     const token = localStorage.getItem("token");
     setLoadingJobs(true);
     axios
-      .get("http://localhost:3000/api/v1/jobs", {
+      .get(`${API_URL}/api/v1/jobs`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {

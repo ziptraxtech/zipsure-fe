@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface Vehicle {
   id: string;
   vehicleNumber: string;
@@ -22,23 +24,29 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-
+  const fetchVehicles = () => {
     const token = localStorage.getItem("token");
+    if (!token) return;
+
     setLoading(true);
 
     axios
-      .get("http://localhost:3000/api/v1/vehicles", {
+      .get(`${API_URL}/api/v1/vehicles`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
-        if (res.data?.success && Array.isArray(res.data.data)) {
+        if (res.data.success) {
           setVehicles(res.data.data);
         }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => console.error("Error fetching vehicles:", err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!open) return;
+
+    fetchVehicles();
   }, [open]);
 
   if (!open) return null;

@@ -12,11 +12,11 @@ const AllJobsModal: React.FC<AllJobsModalProps> = ({ allJobs, onClose }) => {
   return (
     <div
       className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-      onClick={onClose} // Close when clicking outside the modal
+      onClick={onClose}
     >
       <div
         className="bg-white rounded-lg shadow-lg p-4 w-11/12 max-w-4xl"
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-bold">All Jobs</h2>

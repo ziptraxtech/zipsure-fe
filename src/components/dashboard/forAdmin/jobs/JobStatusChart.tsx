@@ -6,11 +6,10 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, ChartOptions } from "cha
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface JobStatusChartProps {
-  jobStatuses: { [key: string]: number }; // accept dynamic keys from API
+  jobStatuses: { [key: string]: number }; 
 }
 
 const JobStatusChart: React.FC<JobStatusChartProps> = ({ jobStatuses }) => {
-  // ✅ Normalize API keys to match chart labels
   const assignedCount = jobStatuses["assigned"] || 0;
   const yetToBeAssignedCount = jobStatuses["yet to be assigned"] || 0;
 

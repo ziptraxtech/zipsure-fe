@@ -33,10 +33,26 @@ const RiderDashboard = () => {
     try {
       setLoadingMyJobs(true);
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/api/v1/jobs/my-jobs', {
-        headers: { Authorization: `Bearer ${token}`, 'Accept': 'application/json' },
+      const url = `${import.meta.env.VITE_API_URL}/api/v1/jobs/my-jobs`;
+      console.log('Fetching jobs from:', url);
+      
+      const res = await fetch(url, {
+        headers: { 
+          'Authorization': `Bearer ${token}`, 
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
       });
+      
+      console.log('Jobs response status:', res.status);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const json = await res.json();
+      console.log('Jobs data:', json);
+      
       if (json.success && Array.isArray(json.data)) {
         const jobs: MyJob[] = json.data.map((j: any) => ({
           id: j.id,
@@ -69,7 +85,10 @@ const RiderDashboard = () => {
     try {
       setSavingId(jobId);
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3000/api/v1/jobs/my-jobs/${jobId}/status`, {
+      const url = `${import.meta.env.VITE_API_URL}/api/v1/jobs/my-jobs/${jobId}/status`;
+      console.log('Updating job status at:', url);
+      
+      const res = await fetch(url, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -77,7 +96,16 @@ const RiderDashboard = () => {
         },
         body: JSON.stringify({ status: newStatus }),
       });
+      
+      console.log('Update response status:', res.status);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const json = await res.json();
+      console.log('Update data:', json);
+      
       if (!res.ok || json?.success === false) {
         throw new Error(json?.message || 'Failed to update status');
       }

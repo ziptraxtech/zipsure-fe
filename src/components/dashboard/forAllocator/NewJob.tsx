@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
 
+// Using Vite's environment variable
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface AddJobModalProps {
   open: boolean;
   onClose: () => void;
@@ -51,7 +54,7 @@ const NewJob: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) => {
       setLoading(true);
       setError(null);
 
-      await axios.post("http://localhost:3000/api/v1/jobs", formData, {
+      await axios.post(`${API_URL}/api/v1/jobs`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

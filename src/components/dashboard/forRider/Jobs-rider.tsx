@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
-// ✅ Fixed interface name (no hyphen allowed)
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface JobRider {
   id: string;
   title: string;
@@ -17,7 +18,6 @@ interface JobRider {
   createdAt: string;
 }
 
-// ✅ Helper to render job status badges
 const getStatusBadge = (status: string) => {
   switch (status?.toLowerCase()) {
     case "in progress":
@@ -35,7 +35,6 @@ const getStatusBadge = (status: string) => {
   }
 };
 
-// ✅ Helper to format date
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
     year: "numeric",
@@ -46,7 +45,6 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// ✅ Fixed component name (no hyphen allowed)
 const JobsRider: React.FC = () => {
   const [jobs, setJobs] = useState<JobRider[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -63,28 +61,38 @@ const JobsRider: React.FC = () => {
         return;
       }
 
-      const response = await fetch("http://localhost:3000/api/v1/jobs/my-jobs", {
+      const url = `${API_URL}/api/v1/jobs/my-jobs`;
+      console.log('Fetching jobs from:', url);
+      
+      const response = await fetch(url, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         },
       });
 
+      console.log('Jobs response status:', response.status);
+
       if (!response.ok) {
-        throw new Error("Failed to fetch jobs");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to fetch jobs");
       }
 
       const data = await response.json();
+      console.log('Jobs data received:', data);
 
       if (data.success && Array.isArray(data.data)) {
         setJobs(data.data);
       } else {
         setJobs([]);
+        console.warn('No jobs data found in response');
       }
     } catch (error) {
       console.error("Error fetching jobs:", error);
       toast({
         title: "Error",
-        description: "Failed to load jobs. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to load jobs. Please try again.",
         className: "bg-red-500 text-white",
         duration: 5000,
       });
@@ -96,10 +104,9 @@ const JobsRider: React.FC = () => {
   useEffect(() => {
     fetchJobs();
 
-    // Refresh jobs every 30 seconds
     const interval = setInterval(fetchJobs, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [navigate]);
 
   if (loading) {
     return (

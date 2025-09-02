@@ -1,6 +1,7 @@
-// src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { useToast } from "@/components/ui/use-toast"; // Import toast hook
+import { useToast } from "@/components/ui/use-toast"; 
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface User {
   id: string;
@@ -19,7 +20,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<string>; // returns role
+  login: (email: string, password: string) => Promise<string>;
   logout: () => void;
 }
 
@@ -33,13 +34,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const validateToken = useCallback(async (token: string) => {
     try {
-      const res = await fetch("http://localhost:3000/api/v1/auth/login", {
+      const url = `${API_URL}/api/v1/auth/validate`;
+      console.log('Validating token at:', url);
+      
+      const res = await fetch(url, {
         headers: {
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
         }
       });
+      
+      console.log('Token validation status:', res.status);
       return res.ok;
     } catch (error) {
+      console.error('Token validation error:', error);
       return false;
     }
   }, []);
@@ -51,7 +59,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("token");
   }, []);
 
-  // Initialize auth state
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -79,18 +86,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
+    const url = `${API_URL}/api/v1/auth/login`;
+    console.log('Logging in at:', url);
+    
     try {
-      const res = await fetch("http://localhost:3000/api/v1/auth/login", {
+      const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Login failed");
+      console.log('Login response status:', res.status);
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Login failed");
       }
+
+      const data = await res.json();
+      console.log('Login successful:', { user: data.data?.user?.email });
 
       const userData = data.data.user;
       const tokenValue = data.data.token;
@@ -101,22 +118,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem("user", JSON.stringify(userData));
       localStorage.setItem("token", tokenValue);
 
-      // ✅ Success toast
       toast({
         title: "Login successful",
         description: `Welcome back!`,
         duration: 5000,
-        className: "bg-green-500 text-white", // green background
+        className: "bg-green-500 text-white",
       });
 
       return userData.role;
     } catch (error: any) {
-      // ❌ Failure toast
-      toast({
+        toast({
         title: "Login failed",
         description: error.message || "Invalid email or password",
         duration: 5000,
-        className: "bg-red-500 text-white", // red background
+        className: "bg-red-500 text-white",
       });
       throw error;
     } finally {
