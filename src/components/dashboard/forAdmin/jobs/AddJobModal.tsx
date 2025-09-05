@@ -54,6 +54,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
   const [loading, setLoading] = useState(false);
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
   const [geocodingLoading, setGeocodingLoading] = useState(false);
+  const [fieldTouched, setFieldTouched] = useState<{ [key: string]: boolean }>({});
 
   const geocodeAddress = async (address: string, city: string, state: string, pin: string) => {
     if (!address || !city || !state || !pin) return null;
@@ -117,6 +118,62 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
     }, [map, from, to]);
     return null;
   };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    // For PIN fields, only allow numbers and limit to 6 digits
+    if (name.endsWith('Pin')) {
+      if (value === '' || /^\d{0,6}$/.test(value)) {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+    
+    // Validate the field
+    validateField(name, value);
+  };
+
+  const validateField = (name: string, value: string) => {
+    const newErrors = { ...errors };
+    
+    if (['title', 'description'].includes(name)) {
+      if (!value.trim()) {
+        newErrors[name] = `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
+      } else if (value.trim().length < 5) {
+        newErrors[name] = `${name.charAt(0).toUpperCase() + name.slice(1)} must be at least 5 characters`;
+      } else {
+        delete newErrors[name];
+      }
+    } 
+    else if (name.endsWith('Pin')) {
+      if (!value.trim()) {
+        newErrors[name] = "PIN code is required";
+      } else if (!/^\d{6}$/.test(value)) {
+        newErrors[name] = "PIN must be 6 digits";
+      } else {
+        delete newErrors[name];
+      }
+    }
+    // Validate required address fields
+    else if (['pickupAddress', 'deliveryAddress', 'pickupCity', 'deliveryCity', 
+              'pickupState', 'deliveryState'].includes(name)) {
+      if (!value.trim()) {
+        newErrors[name] = "This field is required";
+      } else {
+        delete newErrors[name];
+      }
+    }
+    
+    setErrors(newErrors);
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name } = e.target;
+    setFieldTouched(prev => ({ ...prev, [name]: true }));
+  };
+
   useEffect(() => {
     const geocodeAndUpdate = async (type: 'pickup' | 'delivery') => {
       if (!isComplete(type)) {
@@ -154,10 +211,50 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
     }
   }, [formData.pickupLatitude, formData.pickupLongitude, formData.deliveryLatitude, formData.deliveryLongitude]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const renderAddressSection = (type: 'pickup' | 'delivery') => {
+    const isPickup = type === 'pickup';
+    const color = isPickup ? 'green' : 'red';
+    const complete = isComplete(type);
+  
+    const fields = [
+      { name: 'Address', inputType: 'text' },
+      { name: 'City', inputType: 'text' },
+      { name: 'State', inputType: 'text' },
+      { name: 'Pin', inputType: 'text' },
+    ];
+  
+    return (
+      <div className="space-y-2">
+        <Label className={`block text-${color}-600 font-semibold`}>
+          {isPickup ? 'Pickup' : 'Delivery'} Details (Point {isPickup ? 'A' : 'B'})
+          {complete && " ✓"}
+        </Label>
+        {fields.map(({ name, inputType }) => {
+          const fullFieldName = `${type}${name}` as keyof typeof formData; // ✅ use pickup/delivery
+          const error = errors[fullFieldName];
+          const touched = fieldTouched[fullFieldName] || formData[fullFieldName];
+  
+          return (
+            <div key={fullFieldName}>
+              <Input
+                placeholder={`${name}${name === 'Address' ? ' (e.g., Home / Building)' : ''} *`}
+                name={fullFieldName}
+                value={formData[fullFieldName] || ''}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={`${complete ? `border-${color}-500` : ''} ${touched && error ? 'border-red-500' : ''}`}
+                type={inputType}
+                maxLength={name === 'Pin' ? 6 : undefined}
+              />
+              {touched && error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+            </div>
+          );
+        })}
+        <p className="text-xs text-gray-500">Fill all fields to see Point {isPickup ? 'A' : 'B'} on map</p>
+      </div>
+    );
   };
+  
 
   const handleSubmit = async () => {
     const newErrors: { [key: string]: string } = {};
@@ -204,31 +301,6 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
     setRouteCoordinates([]);
   };
 
-  const renderAddressSection = (type: 'pickup' | 'delivery') => {
-    const isPickup = type === 'pickup';
-    const color = isPickup ? 'green' : 'red';
-    const complete = isComplete(type);
-    
-    return (
-      <div className="space-y-2">
-        <Label className={`block text-${color}-600 font-semibold`}>
-          {isPickup ? 'Pickup' : 'Delivery'} Details (Point {isPickup ? 'A' : 'B'})
-          {complete && " ✓"}
-        </Label>
-        {['Address', 'City', 'State', 'Pin'].map(field => (
-          <Input key={field}
-            placeholder={`${field === 'Address' ? 'Home / Address / Building' : field}${field !== 'Address' ? '' : ''} *`}
-            name={`${type}${field}`}
-            value={formData[`${type}${field}`]}
-            onChange={handleChange}
-            className={complete ? `border-${color}-500` : ""}
-          />
-        ))}
-        <p className="text-xs text-gray-500">Fill all fields to see Point {isPickup ? 'A' : 'B'} on map</p>
-      </div>
-    );
-  };
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-h-[80vh] overflow-y-auto max-w-4xl">
@@ -236,14 +308,32 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
         
         <div className="grid grid-cols-2 gap-4 py-2">
           <div>
-            <Label className="mb-2 block">Job Title</Label>
-            <Input name="title" value={formData.title} onChange={handleChange} />
-            {errors.title && <p className="text-red-500 text-sm">{errors.title}</p>}
+            <Label className="mb-2 block">Job Title *</Label>
+            <Input 
+              name="title" 
+              value={formData.title} 
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={fieldTouched.title && errors.title ? 'border-red-500' : ''}
+            />
+            {fieldTouched.title && errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
+            {fieldTouched.title && !errors.title && formData.title.length > 0 && formData.title.length < 5 && (
+              <p className="text-yellow-500 text-xs mt-1">Title must be at least 5 characters</p>
+            )}
           </div>
           <div>
-            <Label className="mb-2 block">Job Description</Label>
-            <Input name="description" value={formData.description} onChange={handleChange} />
-            {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
+            <Label className="mb-2 block">Job Description *</Label>
+            <Input 
+              name="description" 
+              value={formData.description} 
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={fieldTouched.description && errors.description ? 'border-red-500' : ''}
+            />
+            {fieldTouched.description && errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+            {fieldTouched.description && !errors.description && formData.description.length > 0 && formData.description.length < 5 && (
+              <p className="text-yellow-500 text-xs mt-1">Description must be at least 5 characters</p>
+            )}
           </div>
           {renderAddressSection('pickup')}
           {renderAddressSection('delivery')}
