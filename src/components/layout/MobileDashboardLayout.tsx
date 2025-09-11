@@ -47,6 +47,7 @@ import SubscriptionPlans from '@/components/dashboard/forSuperadmin/Subscription
 import ChangePassword from '@/contexts/ChangePassword';
 import Jobs from '@/components/dashboard/forSuperadmin/Jobs';
 import RiderJobs from '@/components/dashboard/forRider/Jobs-rider';
+import NearbyChargers from '@/components/dashboard/forRider/chargers';
 
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
@@ -73,7 +74,8 @@ type ActiveView =
   | 'tracking'
   | 'reports'
   | 'history'
-  | 'jobs-rider';
+  | 'jobs-rider'
+  | 'nearby chargers';
 
 interface NavigationItem {
   id: string;
@@ -163,6 +165,7 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
         return [
           ...baseItems,
           { id: 'jobs', label: 'All Jobs', icon: ClipboardList, url: '/jobs-rider', view: 'jobs-rider' },
+          {id: 'nearby chargers', label: 'Nearby Chargers', icon: MapPin, url: '/nearby-chargers', view: 'nearby chargers' },
         ];
       
       default:
@@ -319,8 +322,10 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
         return <SubscriptionPlans />;
       case 'jobs':
         return <Jobs />;
-      case 'jobs-rider': // ✅ fixed view name
+      case 'jobs-rider': 
         return <RiderJobs />;
+      case 'nearby chargers':
+        return <NearbyChargers />;
       case 'dashboard':
       default:
         return (
