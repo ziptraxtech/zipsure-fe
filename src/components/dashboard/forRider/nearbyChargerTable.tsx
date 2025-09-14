@@ -165,10 +165,10 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="md:table-cell">Name</TableHead>
+              <TableHead className="md:table-cell">Address</TableHead>
+              <TableHead className="hidden md:table-cell">Type</TableHead>
+              <TableHead className="md:table-cell">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -180,14 +180,15 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
                   onClick={(e) => handleRowClick(charger, e)}
                 >
                   <TableCell className="font-medium">{charger.name}</TableCell>
-                  <TableCell>
+                  <TableCell className="md:table-cell min-w-[150px] max-w-[300px]">
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <span className="line-clamp-1">{charger.address}</span>
+                      <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <span className="break-words" title={charger.address}>
+                        {charger.address}
+                      </span>
                     </div>
                   </TableCell>
-                  
-                  <TableCell className="capitalize">
+                  <TableCell className="hidden md:table-cell capitalize">
                     {charger.charger_type || 'Standard'}
                   </TableCell>
                   <TableCell>
