@@ -93,19 +93,24 @@ const RouteIcon = new L.Icon({
 });
 
 const createRoutingControl = (map: L.Map, waypoints: L.LatLng[]) => {
-  return L.Routing.control({
+  const control = L.Routing.control({
     waypoints: waypoints,
-    routeWhileDragging: true,
-    show: true,
-    addWaypoints: false,
-    createMarker: () => null,
-    lineOptions: {
-      styles: [{ color: '#3b82f6', weight: 4 }]
+    lineOptions: { 
+      styles: [{ color: '#3b82f6', weight: 4, opacity: 0.7 }],
+      extendToWaypoints: true,
+      missingRouteTolerance: 0
     },
+    addWaypoints: false,
+    routeWhileDragging: false,
+    createMarker: () => null,
+    show: false,
     draggableWaypoints: false,
     fitSelectedRoutes: true,
     showAlternatives: false
-  }).addTo(map);
+  });
+  
+  control.addTo(map);
+  return control;
 };
 
 interface Charger {
