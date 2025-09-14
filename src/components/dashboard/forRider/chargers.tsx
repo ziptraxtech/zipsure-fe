@@ -221,14 +221,15 @@ const MapComponent = () => {
 
   return (
     <div className="flex flex-col h-full w-full p-4 space-y-4">
-      <div className="h-1/2 w-full rounded-lg overflow-hidden shadow">
+      <div className="h-1/2 w-full rounded-lg overflow-hidden shadow relative z-0">
         <h1 className="text-2xl lg:text-3xl font-bold mb-4">Chargers Map</h1>
         <div className="h-full w-full">
           {position ? (
             <MapContainer 
               center={position} 
               zoom={15} 
-              style={{ height: '100%', width: '100%' }}
+              style={{ height: '100%', width: '100%', position: 'relative', zIndex: 0 }}
+              className="leaflet-container"
             >
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
