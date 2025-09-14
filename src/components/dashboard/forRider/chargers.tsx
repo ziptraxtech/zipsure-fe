@@ -69,7 +69,7 @@ interface Charger {
   charger_type: string | null;
 }
 
-// Component to capture map instance
+
 const MapController = ({ onMapReady, routingControl, setRoutingControl }: any) => {
   const map = useMap();
   
@@ -177,7 +177,6 @@ const MapComponent = () => {
 
     console.log('Creating route from', position, 'to', [charger.latitude, charger.longitude]);
 
-    // Remove existing routing control
     if (routingControl) {
       try {
         currentMap.removeControl(routingControl);
@@ -195,7 +194,6 @@ const MapComponent = () => {
       const control = createRoutingControl(currentMap, waypoints);
       setRoutingControl(control);
 
-      // Fit bounds to show the route
       setTimeout(() => {
         currentMap.fitBounds(L.latLngBounds(waypoints), { padding: [50, 50] });
       }, 100);
@@ -233,9 +231,7 @@ const MapComponent = () => {
               style={{ height: '100%', width: '100%' }}
             >
               <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
               
               <MapController 
                 onMapReady={handleMapReady}
