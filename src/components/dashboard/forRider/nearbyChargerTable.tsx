@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Zap, AlertCircle, Route } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 interface Charger {
   id: string;
@@ -11,7 +12,7 @@ interface Charger {
   latitude: number;
   longitude: number;
   address: string;
-  status: 'active' | 'inactive' | 'maintenance';
+  status: 'active' | 'inactive';
   charger_type: string | null;
   createdAt: string;
   updatedAt: string;
@@ -77,16 +78,14 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
     }
   }, [currentLatitude, currentLongitude]);
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+  const getStatusBadge = (status: string) => {
+    switch (status) {
       case 'active':
-        return 'text-green-500';
+        return <Badge variant="outline" className="text-success border-success">Active</Badge>;
       case 'inactive':
-        return 'text-gray-500';
-      case 'maintenance':
-        return 'text-yellow-500';
+        return <Badge variant="outline" className="text-muted-foreground border-muted">Inactive</Badge>;
       default:
-        return 'text-gray-500';
+        return <Badge variant="outline">Unknown</Badge>;
     }
   };
 
@@ -179,14 +178,12 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
                       <span className="line-clamp-1">{charger.address}</span>
                     </div>
                   </TableCell>
+                  
                   <TableCell className="capitalize">
                     {charger.charger_type || 'Standard'}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${getStatusColor(charger.status)}`}></span>
-                      <span className="capitalize">{charger.status}</span>
-                    </div>
+                    {getStatusBadge(charger.status)}
                   </TableCell>
                   <TableCell>
                     <Button 
