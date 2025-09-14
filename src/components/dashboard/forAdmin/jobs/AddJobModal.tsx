@@ -26,16 +26,66 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const pickupIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+const pickupIcon = new L.DivIcon({
+  html: `
+    <div style="position: relative; width: 32px; height: 41px;">
+      <svg 
+        width="32" 
+        height="41" 
+        viewBox="0 0 32 41" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path 
+          d="M16 0C7.163 0 0 7.163 0 16C0 24.837 16 41 16 41C16 41 32 24.837 32 16C32 7.163 24.837 0 16 0Z" 
+          fill="#10b981"
+          stroke="#0d9f6e"
+          stroke-width="1"
+        />
+        <g transform="translate(4, 6)">
+          <path 
+            d="M9 13a1 1 0 0 0-1-1H5.061a1 1 0 0 1-.75-1.811l6.836-6.835a1.207 1.207 0 0 1 1.707 0l6.835 6.835a1 1 0 0 1-.75 1.811H16a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z" 
+            fill="white"
+          />
+        </g>
+      </svg>
+    </div>
+  `,
+  className: 'pickup-marker',
+  iconSize: [32, 41],
+  iconAnchor: [16, 41],
+  popupAnchor: [0, -41]
 });
 
-const deliveryIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+const deliveryIcon = new L.DivIcon({
+  html: `
+    <div style="position: relative; width: 32px; height: 41px;">
+      <svg 
+        width="32" 
+        height="41" 
+        viewBox="0 0 32 41" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path 
+          d="M16 0C7.163 0 0 7.163 0 16C0 24.837 16 41 16 41C16 41 32 24.837 32 16C32 7.163 24.837 0 16 0Z" 
+          fill="#f59e0b"
+          stroke="#d97706"
+          stroke-width="1"
+        />
+        <g transform="translate(4, 6)">
+          <path 
+            d="M15 11a1 1 0 0 0 1 1h2.939a1 1 0 0 1 .75 1.811l-6.835 6.836a1.207 1.207 0 0 1-1.707 0L4.31 13.81a1 1 0 0 1 .75-1.811H8a1 1 0 0 0 1-1V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1z" 
+            fill="white"
+          />
+        </g>
+      </svg>
+    </div>
+  `,
+  className: 'delivery-marker',
+  iconSize: [32, 41],
+  iconAnchor: [16, 41],
+  popupAnchor: [0, -41]
 });
 
 interface AddJobModalProps {

@@ -17,16 +17,70 @@ declare module 'leaflet' {
 const defaultIcon = L.Icon.Default.prototype as any;
 delete defaultIcon._getIconUrl;
 
-const MyLocation = new L.Icon({
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+const MyLocation = new L.DivIcon({
+  html: `
+    <div style="position: relative; width: 32px; height: 41px;">
+      <svg 
+        width="32" 
+        height="41" 
+        viewBox="0 0 32 41" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path 
+          d="M16 0C7.163 0 0 7.163 0 16C0 24.837 16 41 16 41C16 41 32 24.837 32 16C32 7.163 24.837 0 16 0Z" 
+          fill="#3b82f6"
+          stroke="#2563eb"
+          stroke-width="1"
+        />
+        <g transform="translate(8, 8)">
+          <path 
+            d="M8 2C4.68629 2 2 4.68629 2 8C2 11.3137 8 20 8 20C8 20 14 11.3137 14 8C14 4.68629 11.3137 2 8 2Z" 
+            fill="white"
+            stroke="white"
+            stroke-width="1.5"
+          />
+          <circle cx="8" cy="8" r="2" fill="#3b82f6" />
+        </g>
+      </svg>
+    </div>
+  `,
+  className: 'my-location-marker',
+  iconSize: [32, 41],
+  iconAnchor: [16, 41],
+  popupAnchor: [0, -41]
 });
 
-const ChargerLocation = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+const ChargerLocation = new L.DivIcon({
+  html: `
+    <div style="position: relative; width: 32px; height: 41px;">
+      <svg 
+        width="32" 
+        height="41" 
+        viewBox="0 0 32 41" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path 
+          d="M16 0C7.163 0 0 7.163 0 16C0 24.837 16 41 16 41C16 41 32 24.837 32 16C32 7.163 24.837 0 16 0Z" 
+          fill="#10b981"
+          stroke="#0d9f6e"
+          stroke-width="1"
+        />
+        <g transform="translate(6, 6) scale(0.9)">
+          <path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0v-6.998a2 2 0 0 0-.59-1.42L18 5" fill="none" stroke="white" stroke-width="2"/>
+          <path d="M14 21V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16" fill="none" stroke="white" stroke-width="2"/>
+          <path d="M2 21h13" stroke="white" stroke-width="2"/>
+          <path d="M3 7h11" stroke="white" stroke-width="2"/>
+          <path d="m9 11-2 3h3l-2 3" fill="none" stroke="white" stroke-width="2"/>
+        </g>
+      </svg>
+    </div>
+  `,
+  className: 'ev-charger-marker',
+  iconSize: [32, 41],
+  iconAnchor: [16, 41],
+  popupAnchor: [0, -41]
 });
 
 const RouteIcon = new L.Icon({
@@ -44,18 +98,13 @@ const createRoutingControl = (map: L.Map, waypoints: L.LatLng[]) => {
     routeWhileDragging: true,
     show: true,
     addWaypoints: false,
+    createMarker: () => null,
+    lineOptions: {
+      styles: [{ color: '#3b82f6', weight: 4 }]
+    },
     draggableWaypoints: false,
     fitSelectedRoutes: true,
-    showAlternatives: false,
-    lineOptions: {
-      styles: [{ color: '#3b82f6', opacity: 0.7, weight: 5 }]
-    },
-    createMarker: (i: number, wp: any, n: number) => {
-      return L.marker(wp.latLng, {
-        icon: i === 0 ? MyLocation : RouteIcon,
-        draggable: false
-      });
-    }
+    showAlternatives: false
   }).addTo(map);
 };
 
@@ -68,7 +117,6 @@ interface Charger {
   status: string;
   charger_type: string | null;
 }
-
 
 const MapController = ({ onMapReady, routingControl, setRoutingControl }: any) => {
   const map = useMap();
