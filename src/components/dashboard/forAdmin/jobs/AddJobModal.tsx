@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "leaflet-routing-machine";
+import { debounce } from "lodash";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -43,6 +44,50 @@ interface AddJobModalProps {
   onJobAdded: (newJob?: any) => void;
 }
 
+const RoutingMachine: React.FC<{ from: [number, number]; to: [number, number] }> = React.memo(({ from, to }) => {
+  const map = useMap();
+  const routingControlRef = useRef<any>(null);
+  
+  useEffect(() => {
+    if (!map || !from || !to) return;
+    
+    if (routingControlRef.current) {
+      try {
+        map.removeControl(routingControlRef.current);
+      } catch (e) {
+      }
+    }
+    
+    const control = L.Routing.control({
+      waypoints: [L.latLng(from[0], from[1]), L.latLng(to[0], to[1])],
+      lineOptions: { 
+        styles: [{ color: "blue", weight: 4, opacity: 0.7 }], 
+        extendToWaypoints: true, 
+        missingRouteTolerance: 0 
+      },
+      addWaypoints: false,
+      routeWhileDragging: false,
+      createMarker: () => null,
+      show: false,
+    });
+    
+    routingControlRef.current = control;
+    control.addTo(map);
+    
+    return () => {
+      if (routingControlRef.current) {
+        try {
+          map.removeControl(routingControlRef.current);
+        } catch (e) {
+        }
+        routingControlRef.current = null;
+      }
+    };
+  }, [map, from?.[0], from?.[1], to?.[0], to?.[1]]);
+  
+  return null;
+});
+
 const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -52,166 +97,194 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
-  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
   const [geocodingLoading, setGeocodingLoading] = useState(false);
   const [fieldTouched, setFieldTouched] = useState<{ [key: string]: boolean }>({});
+  
+  const geocodingInProgress = useRef<Set<string>>(new Set());
+  const abortControllers = useRef<Map<string, AbortController>>(new Map());
 
-  const geocodeAddress = async (address: string, city: string, state: string, pin: string) => {
-    if (!address || !city || !state || !pin) return null;
+  const geocodeAddress = useCallback(async (
+    address: string, 
+    city: string, 
+    state: string, 
+    pin: string,
+    type: string
+  ): Promise<{ lat: number; lng: number } | null> => {
+    if (!address?.trim() || !city?.trim() || !state?.trim() || !pin?.trim()) return null;
+    
+    const geocodeKey = `${type}-${address}-${city}-${state}-${pin}`;
+    
+    if (abortControllers.current.has(type)) {
+      abortControllers.current.get(type)?.abort();
+    }
+    
+    const controller = new AbortController();
+    abortControllers.current.set(type, controller);
+    
     try {
+      const fullAddress = `${address}, ${city}, ${state} ${pin}`;
+      const encodedAddress = encodeURIComponent(fullAddress);
+      
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${address}, ${city}, ${state} ${pin}`)}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=in`,
+        {
+          method: 'GET',
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'YourAppName/1.0 (your-email@example.com)',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
+        }
       );
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
       const data = await response.json();
       return data?.[0] ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') return null;
       console.error("Geocoding error:", error);
       return null;
+    } finally {
+      abortControllers.current.delete(type);
     }
-  };
+  }, []);
 
-  const reverseGeocode = async (lat: number, lng: number) => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
-      );
-      const data = await response.json();
-      const addr = data?.address || {};
-      const houseNumber = addr.house_number ? `${addr.house_number} ` : "";
-      const road = addr.road || "";
-      const suburb = addr.suburb || addr.neighbourhood || "";
-      const composedAddress = (houseNumber + road).trim() || data?.display_name || "";
-      const city = addr.city || addr.town || addr.village || suburb || "";
-      const state = addr.state || addr.region || "";
-      const pin = addr.postcode || "";
-      return { address: composedAddress, city, state, pin };
-    } catch (error) {
-      console.error("Reverse geocoding error:", error);
-      return { address: "", city: "", state: "", pin: "" };
-    }
-  };
-
-  const isComplete = (type: 'pickup' | 'delivery') => {
-    const prefix = type === 'pickup' ? 'pickup' : 'delivery';
-    return formData[`${prefix}Address`]?.trim() && formData[`${prefix}City`]?.trim() && 
-           formData[`${prefix}State`]?.trim() && formData[`${prefix}Pin`]?.trim();
-  };
-
-  const RoutingMachine: React.FC<{ from: [number, number]; to: [number, number] }> = ({ from, to }) => {
-    const map = useMap();
-    useEffect(() => {
-      if (!map || !from || !to) return;
-      const control = L.Routing.control({
-        waypoints: [L.latLng(from[0], from[1]), L.latLng(to[0], to[1])],
-        lineOptions: { 
-          styles: [{ color: "blue", weight: 4, opacity: 0.7 }], 
-          extendToWaypoints: true, 
-          missingRouteTolerance: 0 
-        },
-        addWaypoints: false,
-        routeWhileDragging: false,
-        createMarker: () => null,
-      }).addTo(map);
-      return () => {
-        map.removeControl(control);
-      };
-    }, [map, from, to]);
-    return null;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    
-    // For PIN fields, only allow numbers and limit to 6 digits
-    if (name.endsWith('Pin')) {
-      if (value === '' || /^\d{0,6}$/.test(value)) {
-        setFormData(prev => ({ ...prev, [name]: value }));
-      }
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
-    
-    // Validate the field
-    validateField(name, value);
-  };
-
-  const validateField = (name: string, value: string) => {
-    const newErrors = { ...errors };
-    
-    if (['title', 'description'].includes(name)) {
-      if (!value.trim()) {
-        newErrors[name] = `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
-      } else if (value.trim().length < 5) {
-        newErrors[name] = `${name.charAt(0).toUpperCase() + name.slice(1)} must be at least 5 characters`;
-      } else {
-        delete newErrors[name];
-      }
-    } 
-    else if (name.endsWith('Pin')) {
-      if (!value.trim()) {
-        newErrors[name] = "PIN code is required";
-      } else if (!/^\d{6}$/.test(value)) {
-        newErrors[name] = "PIN must be 6 digits";
-      } else {
-        delete newErrors[name];
-      }
-    }
-    // Validate required address fields
-    else if (['pickupAddress', 'deliveryAddress', 'pickupCity', 'deliveryCity', 
-              'pickupState', 'deliveryState'].includes(name)) {
-      if (!value.trim()) {
-        newErrors[name] = "This field is required";
-      } else {
-        delete newErrors[name];
-      }
-    }
-    
-    setErrors(newErrors);
-  };
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const { name } = e.target;
-    setFieldTouched(prev => ({ ...prev, [name]: true }));
-  };
-
-  useEffect(() => {
-    const geocodeAndUpdate = async (type: 'pickup' | 'delivery') => {
-      if (!isComplete(type)) {
-        setFormData(prev => ({ ...prev, [`${type}Latitude`]: "", [`${type}Longitude`]: "" }));
-        return;
-      }
+  const debouncedGeocode = useCallback(
+    debounce(async (type: 'pickup' | 'delivery', formData: any) => {
+      const key = `${type}Address`;
+      if (geocodingInProgress.current.has(type)) return;
       
+      geocodingInProgress.current.add(type);
       setGeocodingLoading(true);
-      const coords = await geocodeAddress(
-        formData[`${type}Address`], formData[`${type}City`], 
-        formData[`${type}State`], formData[`${type}Pin`]
-      );
       
-      if (coords) {
-        setFormData(prev => ({ ...prev, [`${type}Latitude`]: coords.lat.toString(), [`${type}Longitude`]: coords.lng.toString() }));
-      } else {
-        toast({ title: "Geocoding Error", description: `Could not find ${type} location. Please check the address.`, className: "bg-yellow-500 text-white" });
+      try {
+        const coords = await geocodeAddress(
+          formData[`${type}Address`],
+          formData[`${type}City`],
+          formData[`${type}State`],
+          formData[`${type}Pin`],
+          type
+        );
+        
+        if (coords) {
+          setFormData(prev => ({ 
+            ...prev, 
+            [`${type}Latitude`]: coords.lat.toString(), 
+            [`${type}Longitude`]: coords.lng.toString() 
+          }));
+        }
+      } catch (error) {
+        console.error(`Error geocoding ${type}:`, error);
+      } finally {
+        geocodingInProgress.current.delete(type);
+        setGeocodingLoading(false);
       }
-      setGeocodingLoading(false);
-    };
+    }, 2000),
+    [geocodeAddress]
+  );
 
-    geocodeAndUpdate('pickup');
-    geocodeAndUpdate('delivery');
+  const isComplete = useCallback((type: 'pickup' | 'delivery') => {
+    const prefix = type === 'pickup' ? 'pickup' : 'delivery';
+    return !!(formData[`${prefix}Address`]?.trim() && 
+             formData[`${prefix}City`]?.trim() && 
+             formData[`${prefix}State`]?.trim() && 
+             formData[`${prefix}Pin`]?.trim());
   }, [formData.pickupAddress, formData.pickupCity, formData.pickupState, formData.pickupPin,
       formData.deliveryAddress, formData.deliveryCity, formData.deliveryState, formData.deliveryPin]);
 
-  useEffect(() => {
-    if (formData.pickupLatitude && formData.pickupLongitude && formData.deliveryLatitude && formData.deliveryLongitude) {
-      setRouteCoordinates([
-        [parseFloat(formData.pickupLatitude), parseFloat(formData.pickupLongitude)],
-        [parseFloat(formData.deliveryLatitude), parseFloat(formData.deliveryLongitude)]
-      ]);
-    } else {
-      setRouteCoordinates([]);
+  const routeCoordinates = useMemo(() => {
+    if (formData.pickupLatitude && formData.pickupLongitude && 
+        formData.deliveryLatitude && formData.deliveryLongitude) {
+      return [
+        [parseFloat(formData.pickupLatitude), parseFloat(formData.pickupLongitude)] as [number, number],
+        [parseFloat(formData.deliveryLatitude), parseFloat(formData.deliveryLongitude)] as [number, number]
+      ];
     }
+    return null;
   }, [formData.pickupLatitude, formData.pickupLongitude, formData.deliveryLatitude, formData.deliveryLongitude]);
 
-  const renderAddressSection = (type: 'pickup' | 'delivery') => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    if (name.endsWith('Pin')) {
+      if (value !== '' && !/^\d{0,6}$/.test(value)) return;
+    }
+    
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    if (fieldTouched[name]) {
+      validateField(name, value);
+    }
+  }, [fieldTouched]);
+  const validateField = useCallback((name: string, value: string) => {
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      
+      if (['title', 'description'].includes(name)) {
+        if (!value.trim()) {
+          newErrors[name] = `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
+        } else if (value.trim().length < 5) {
+          newErrors[name] = `${name.charAt(0).toUpperCase() + name.slice(1)} must be at least 5 characters`;
+        } else {
+          delete newErrors[name];
+        }
+      } else if (name.endsWith('Pin')) {
+        if (!value.trim()) {
+          newErrors[name] = "PIN code is required";
+        } else if (!/^\d{6}$/.test(value)) {
+          newErrors[name] = "PIN must be 6 digits";
+        } else {
+          delete newErrors[name];
+        }
+      } else if (['pickupAddress', 'deliveryAddress', 'pickupCity', 'deliveryCity', 
+                  'pickupState', 'deliveryState'].includes(name)) {
+        if (!value.trim()) {
+          newErrors[name] = "This field is required";
+        } else {
+          delete newErrors[name];
+        }
+      }
+      
+      return newErrors;
+    });
+  }, []);
+
+  const handleBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    const { name } = e.target;
+    setFieldTouched(prev => ({ ...prev, [name]: true }));
+    validateField(name, e.target.value);
+  }, [validateField]);
+
+  useEffect(() => {
+    if (isComplete('pickup')) {
+      debouncedGeocode('pickup', formData);
+    } else {
+      setFormData(prev => ({ ...prev, pickupLatitude: "", pickupLongitude: "" }));
+    }
+    
+    if (isComplete('delivery')) {
+      debouncedGeocode('delivery', formData);
+    } else {
+      setFormData(prev => ({ ...prev, deliveryLatitude: "", deliveryLongitude: "" }));
+    }
+  }, [
+    formData.pickupAddress, formData.pickupCity, formData.pickupState, formData.pickupPin,
+    formData.deliveryAddress, formData.deliveryCity, formData.deliveryState, formData.deliveryPin,
+    debouncedGeocode, isComplete
+  ]);
+
+  useEffect(() => {
+    return () => {
+      abortControllers.current.forEach(controller => controller.abort());
+      abortControllers.current.clear();
+      geocodingInProgress.current.clear();
+      debouncedGeocode.cancel();
+    };
+  }, [debouncedGeocode]);
+
+  const renderAddressSection = useCallback((type: 'pickup' | 'delivery') => {
     const isPickup = type === 'pickup';
     const color = isPickup ? 'green' : 'red';
     const complete = isComplete(type);
@@ -230,7 +303,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
           {complete && " ✓"}
         </Label>
         {fields.map(({ name, inputType }) => {
-          const fullFieldName = `${type}${name}` as keyof typeof formData; // ✅ use pickup/delivery
+          const fullFieldName = `${type}${name}` as keyof typeof formData;
           const error = errors[fullFieldName];
           const touched = fieldTouched[fullFieldName] || formData[fullFieldName];
   
@@ -253,10 +326,9 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
         <p className="text-xs text-gray-500">Fill all fields to see Point {isPickup ? 'A' : 'B'} on map</p>
       </div>
     );
-  };
-  
+  }, [formData, errors, fieldTouched, handleChange, handleBlur, isComplete]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     const newErrors: { [key: string]: string } = {};
     if (!formData.title.trim()) newErrors.title = "Job title is required";
     if (!formData.description.trim()) newErrors.description = "Job description is required";
@@ -290,16 +362,48 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
     } finally {
       setLoading(false);
     }
-  };
+  }, [formData, toast, onJobAdded, onClose]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData({
       title: "", description: "", pickupAddress: "", pickupCity: "", pickupState: "", pickupPin: "",
       deliveryAddress: "", deliveryCity: "", deliveryState: "", deliveryPin: "",
       pickupLongitude: "", pickupLatitude: "", deliveryLongitude: "", deliveryLatitude: "", scheduleTime: "",
     });
-    setRouteCoordinates([]);
-  };
+    setErrors({});
+    setFieldTouched({});
+  }, []);
+
+  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&countrycodes=in`,
+        {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'YourAppName/1.0 (your-email@example.com)',
+            'Accept': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+      const addr = data?.address || {};
+      const houseNumber = addr.house_number ? `${addr.house_number} ` : "";
+      const road = addr.road || "";
+      const suburb = addr.suburb || addr.neighbourhood || "";
+      const composedAddress = (houseNumber + road).trim() || data?.display_name || "";
+      const city = addr.city || addr.town || addr.village || suburb || "";
+      const state = addr.state || addr.region || "";
+      const pin = addr.postcode || "";
+      return { address: composedAddress, city, state, pin };
+    } catch (error) {
+      console.error("Reverse geocoding error:", error);
+      return { address: "", city: "", state: "", pin: "" };
+    }
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -317,9 +421,6 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
               className={fieldTouched.title && errors.title ? 'border-red-500' : ''}
             />
             {fieldTouched.title && errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
-            {fieldTouched.title && !errors.title && formData.title.length > 0 && formData.title.length < 5 && (
-              <p className="text-yellow-500 text-xs mt-1">Title must be at least 5 characters</p>
-            )}
           </div>
           <div>
             <Label className="mb-2 block">Job Description *</Label>
@@ -331,9 +432,6 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
               className={fieldTouched.description && errors.description ? 'border-red-500' : ''}
             />
             {fieldTouched.description && errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
-            {fieldTouched.description && !errors.description && formData.description.length > 0 && formData.description.length < 5 && (
-              <p className="text-yellow-500 text-xs mt-1">Description must be at least 5 characters</p>
-            )}
           </div>
           {renderAddressSection('pickup')}
           {renderAddressSection('delivery')}
@@ -345,46 +443,73 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
             {geocodingLoading && <span className="text-blue-500 text-sm">Locating address...</span>}
           </div>
           
-          <MapContainer center={[28.6139, 77.209]} zoom={10} style={{ height: "400px", width: "100%" }}>
-            <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <MapContainer 
+            center={[28.6139, 77.209]} 
+            zoom={10} 
+            style={{ height: "400px", width: "100%" }}
+          >
+            <TileLayer 
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>' 
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+            />
             
             {isComplete('pickup') && formData.pickupLatitude && formData.pickupLongitude && (
-              <Marker position={[parseFloat(formData.pickupLatitude), parseFloat(formData.pickupLongitude)]} icon={pickupIcon} draggable
-                eventHandlers={{ dragend: async (e) => {
-                  const { lat, lng } = e.target.getLatLng();
-                  setFormData(prev => ({ ...prev, pickupLatitude: lat.toString(), pickupLongitude: lng.toString() }));
-                  const details = await reverseGeocode(lat, lng);
-                  setFormData(prev => ({
-                    ...prev,
-                    pickupAddress: details.address || prev.pickupAddress,
-                    pickupCity: details.city || prev.pickupCity,
-                    pickupState: details.state || prev.pickupState,
-                    pickupPin: details.pin || prev.pickupPin,
-                  }));
-                }}}>
-                <Popup><strong>Point A - Pickup Location (Green)</strong><br />{formData.pickupAddress}<br />{formData.pickupCity}, {formData.pickupState} {formData.pickupPin}</Popup>
+              <Marker 
+                position={[parseFloat(formData.pickupLatitude), parseFloat(formData.pickupLongitude)]} 
+                icon={pickupIcon} 
+                draggable
+                eventHandlers={{ 
+                  dragend: async (e) => {
+                    const { lat, lng } = e.target.getLatLng();
+                    setFormData(prev => ({ ...prev, pickupLatitude: lat.toString(), pickupLongitude: lng.toString() }));
+                    const details = await reverseGeocode(lat, lng);
+                    setFormData(prev => ({
+                      ...prev,
+                      pickupAddress: details.address || prev.pickupAddress,
+                      pickupCity: details.city || prev.pickupCity,
+                      pickupState: details.state || prev.pickupState,
+                      pickupPin: details.pin || prev.pickupPin,
+                    }));
+                  }
+                }}
+              >
+                <Popup>
+                  <strong>Point A - Pickup Location (Green)</strong><br />
+                  {formData.pickupAddress}<br />
+                  {formData.pickupCity}, {formData.pickupState} {formData.pickupPin}
+                </Popup>
               </Marker>
             )}
 
             {isComplete('delivery') && formData.deliveryLatitude && formData.deliveryLongitude && (
-              <Marker position={[parseFloat(formData.deliveryLatitude), parseFloat(formData.deliveryLongitude)]} icon={deliveryIcon} draggable
-                eventHandlers={{ dragend: async (e) => {
-                  const { lat, lng } = e.target.getLatLng();
-                  setFormData(prev => ({ ...prev, deliveryLatitude: lat.toString(), deliveryLongitude: lng.toString() }));
-                  const details = await reverseGeocode(lat, lng);
-                  setFormData(prev => ({
-                    ...prev,
-                    deliveryAddress: details.address || prev.deliveryAddress,
-                    deliveryCity: details.city || prev.deliveryCity,
-                    deliveryState: details.state || prev.deliveryState,
-                    deliveryPin: details.pin || prev.deliveryPin,
-                  }));
-                }}}>
-                <Popup><strong>Point B - Delivery Location (Red)</strong><br />{formData.deliveryAddress}<br />{formData.deliveryCity}, {formData.deliveryState} {formData.deliveryPin}</Popup>
+              <Marker 
+                position={[parseFloat(formData.deliveryLatitude), parseFloat(formData.deliveryLongitude)]} 
+                icon={deliveryIcon} 
+                draggable
+                eventHandlers={{ 
+                  dragend: async (e) => {
+                    const { lat, lng } = e.target.getLatLng();
+                    setFormData(prev => ({ ...prev, deliveryLatitude: lat.toString(), deliveryLongitude: lng.toString() }));
+                    const details = await reverseGeocode(lat, lng);
+                    setFormData(prev => ({
+                      ...prev,
+                      deliveryAddress: details.address || prev.deliveryAddress,
+                      deliveryCity: details.city || prev.deliveryCity,
+                      deliveryState: details.state || prev.deliveryState,
+                      deliveryPin: details.pin || prev.deliveryPin,
+                    }));
+                  }
+                }}
+              >
+                <Popup>
+                  <strong>Point B - Delivery Location (Red)</strong><br />
+                  {formData.deliveryAddress}<br />
+                  {formData.deliveryCity}, {formData.deliveryState} {formData.deliveryPin}
+                </Popup>
               </Marker>
             )}
 
-            {routeCoordinates.length === 2 && (
+            {routeCoordinates && (
               <RoutingMachine from={routeCoordinates[0]} to={routeCoordinates[1]} />
             )}
           </MapContainer>
@@ -394,6 +519,9 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
             <p><span className="inline-block w-3 h-3 bg-red-500 rounded-full mr-2"></span>Red: Delivery (Ending Point)</p>
             <p><span className="inline-block w-3 h-0.5 bg-blue-600 mr-2" style={{width: '12px'}}></span>Blue: Road Route</p>
             <p className="text-xs text-gray-500 mt-2">💡 Drag pins to update address fields automatically</p>
+            {geocodingLoading && (
+              <p className="text-xs text-blue-500 mt-1">🔍 Finding location on map...</p>
+            )}
           </div>
         </div>
 
