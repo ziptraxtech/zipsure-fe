@@ -34,6 +34,7 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
   const [chargers, setChargers] = useState<Charger[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedChargerId, setSelectedChargerId] = useState<string | null>(null);
 
   const fetchNearbyChargers = async () => {
     try {
@@ -92,6 +93,14 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
   const handleRouteClick = (charger: Charger, e: React.MouseEvent) => {
     e.stopPropagation();
     onChargerClick(charger, e);
+  };
+
+  const handleRowClick = (charger: Charger, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedChargerId(charger.id === selectedChargerId ? null : charger.id);
+    if (onChargerClick) {
+      onChargerClick(charger, e);
+    }
   };
 
   if (loading) {
@@ -160,7 +169,6 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
               <TableHead>Address</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -168,8 +176,8 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
               chargers.map((charger) => (
                 <TableRow 
                   key={charger.id}
-                  className="cursor-pointer hover:bg-gray-50"
-                  onClick={(e) => onChargerClick(charger, e)}
+                  className={`cursor-pointer hover:bg-gray-50 ${selectedChargerId === charger.id ? 'ring-2 ring-green-500' : ''}`}
+                  onClick={(e) => handleRowClick(charger, e)}
                 >
                   <TableCell className="font-medium">{charger.name}</TableCell>
                   <TableCell>
@@ -184,17 +192,6 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
                   </TableCell>
                   <TableCell>
                     {getStatusBadge(charger.status)}
-                  </TableCell>
-                  <TableCell>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={(e) => handleRouteClick(charger, e)}
-                      title="Show route"
-                    >
-                      <Route className="h-4 w-4" />
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))
