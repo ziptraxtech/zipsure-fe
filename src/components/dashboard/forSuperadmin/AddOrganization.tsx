@@ -155,7 +155,7 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({ onAdded }
         if (errorData.details && Array.isArray(errorData.details)) {
           errorMessage += errorData.details
             .map(
-              (d: any) =>
+              (d: { field?: string; message?: string }) =>
                 `• ${d.field || "Field"}: ${d.message || "Invalid value"}`
             )
             .join("\n");
@@ -201,7 +201,7 @@ const AddOrganizationDialog: React.FC<AddOrganizationDialogProps> = ({ onAdded }
             onClick={() => setIsOrgDialogOpen(true)}
           >
             <Plus className="h-6 w-6 mr-1" />
-            Add Organization
+            Add
           </Button>
         </DialogTrigger>
 

@@ -235,7 +235,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
             </CardTitle>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => setIsAddUserOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Add User
+                <Plus className="h-4 w-4 mr-1" /> Add
               </Button>
               {onRefresh && (
                 <Button

@@ -131,7 +131,7 @@ const JobsRider: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead className="hidden md:table-cell">Description</TableHead>
                 <TableHead className="hidden md:table-cell">Pickup</TableHead>
                 <TableHead className="hidden lg:table-cell">Delivery</TableHead>
                 <TableHead>Status</TableHead>
@@ -142,7 +142,9 @@ const JobsRider: React.FC = () => {
               {jobs.length > 0 ? (
                 jobs.map((job) => (
                   <TableRow key={job.id} className="hover:bg-muted/40">
-                    <TableCell className="font-medium">{job.title || "—"}</TableCell>
+                    <TableCell className="font-medium whitespace-normal break-words max-w-[150px]" title={job.title || ""}>
+                      {job.title || "—"}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell whitespace-normal break-words max-w-[200px]">
                       {job.description || "—"}
                     </TableCell>

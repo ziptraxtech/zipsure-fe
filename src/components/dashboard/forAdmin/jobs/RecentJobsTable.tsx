@@ -197,10 +197,10 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={fetchAllJobs}>
               <Eye className="h-4 w-4 mr-2" />
-              {loadingJobs ? "Loading..." : "View All Jobs"}
+              {loadingJobs ? "Loading..." : "View All"}
             </Button>
             <Button size="sm" onClick={() => setIsAddJobOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Add Job
+              <Plus className="h-4 w-4 mr-1" /> Add
             </Button>
           </div>
         </div>

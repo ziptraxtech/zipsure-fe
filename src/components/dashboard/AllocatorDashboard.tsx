@@ -272,7 +272,7 @@ const AllocatorDashboard: React.FC = () => {
             </CardTitle>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => setIsAddJobOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Add Job
+                <Plus className="h-4 w-4 mr-1" /> Add
               </Button>
             </div>
           </div>
