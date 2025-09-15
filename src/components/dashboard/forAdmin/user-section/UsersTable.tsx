@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Eye, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DownloadCSV } from "../../forSuperadmin/downloadcsv";
 
 import {
   Dialog,
@@ -234,6 +235,11 @@ const UsersTable: React.FC<UsersTableProps> = ({
               <Users className="h-5 w-5" /> Users
             </CardTitle>
             <div className="flex gap-2">
+              <DownloadCSV 
+                endpoint="users" 
+                onDownloadStart={() => {}}
+                onDownloadComplete={() => {}}
+              />
               <Button size="sm" onClick={() => setIsAddUserOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Add
               </Button>
