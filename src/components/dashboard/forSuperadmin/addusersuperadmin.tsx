@@ -3,6 +3,7 @@ import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Plus } from "lucide-react";
+import { DownloadCSV } from "./downloadcsv";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +63,8 @@ const AddUserSuperAdmin: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
   const totalPages = Math.ceil(users.length / usersPerPage);
+
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const validateField = (name: string, value: string) => {
     let error = "";
@@ -252,6 +255,12 @@ const AddUserSuperAdmin: React.FC = () => {
               <Users className="h-5 w-5" />Users
             </CardTitle>
             <div className="flex gap-2">
+              <DownloadCSV 
+                endpoint="users"
+                disabled={isDownloading || users.length === 0}
+                onDownloadStart={() => setIsDownloading(true)}
+                onDownloadComplete={() => setIsDownloading(false)}
+              />
               <Button size="sm" onClick={() => setIsAddUserOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Add
               </Button>

@@ -8,6 +8,7 @@ import { Building2Icon } from "lucide-react";
 import { CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
+import { DownloadCSV } from "./downloadcsv";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -112,6 +113,7 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
   const { toast } = useToast();
   const [organizationsState, setOrganizationsState] = useState<Organization[]>([]);
   const [isLoadingState, setIsLoadingState] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const fetchOrganizations = useCallback(async (): Promise<Organization[] | undefined> => {
     try {
@@ -190,8 +192,16 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
             <Building2Icon className="h-5 w-5" />
             Organizations
           </CardTitle>
-          {/* ✅ Trigger a table refresh as soon as an org is added */}
-          <AddOrganizationDialog onAdded={loadOrganizations} />
+          
+          <div className="flex items-center gap-2">
+            <DownloadCSV 
+              endpoint="organizations"
+              disabled={isDownloading || !organizationsState?.length}
+              onDownloadStart={() => setIsDownloading(true)}
+              onDownloadComplete={() => setIsDownloading(false)}
+            />
+            <AddOrganizationDialog onAdded={loadOrganizations} />
+          </div>
         </div>
         <OrganizationTable organizations={organizationsState} isLoading={isLoadingState} />
       </div>

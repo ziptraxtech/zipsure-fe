@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DownloadCSV } from "./downloadcsv";
 
 interface AllocatorLike {
   id?: string;
@@ -132,8 +133,15 @@ const Jobs: React.FC = () => {
       </div>
 
       <Card className="shadow-md border rounded-lg">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Jobs</CardTitle>
+          <div className="flex items-center gap-2">
+            <DownloadCSV 
+              endpoint="jobs" 
+              onDownloadStart={() => {}}
+              onDownloadComplete={() => {}}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Table className="text-xs md:text-sm">

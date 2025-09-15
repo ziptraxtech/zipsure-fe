@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2 } from "lucide-react"; // delete icon
+import { Trash2} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DownloadCSV } from "./downloadcsv";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -76,6 +77,7 @@ const SubscriptionPlans: React.FC = () => {
   const [deletePlan, setDeletePlan] = useState<Plan | null>(null); // for delete confirmation
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState<boolean>(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
 
   const token = localStorage.getItem("token");
@@ -294,9 +296,19 @@ const SubscriptionPlans: React.FC = () => {
       )}
 
       {/* Payments Table */}
-      <Card className="">
-        <CardHeader>
-          <CardTitle>Payments</CardTitle>
+      <Card className="shadow-sm border rounded-lg">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <span>Payments</span>
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <DownloadCSV 
+              endpoint="payments"
+              disabled={isDownloading || payments.length === 0}
+              onDownloadStart={() => setIsDownloading(true)}
+              onDownloadComplete={() => setIsDownloading(false)}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {paymentsLoading ? (
@@ -420,7 +432,6 @@ const SubscriptionPlans: React.FC = () => {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  // Reset form fields
                   const form = document.getElementById('plan-form') as HTMLFormElement;
                   if (form) {
                     form.reset();
