@@ -324,6 +324,7 @@ const SubscriptionPlans: React.FC = () => {
                   <TableHead>Amount</TableHead>
                   <TableHead className="hidden md:table-cell">Paid At</TableHead>
                   <TableHead className="hidden lg:table-cell">Razorpay Order ID</TableHead>
+                  <TableHead className="hidden lg:table-cell">Razorpay Payment ID</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -331,15 +332,38 @@ const SubscriptionPlans: React.FC = () => {
                   const orgName = p.subscription?.organization?.name || "-";
                   const paidAt = p.paidAt
                     ? new Date(p.paidAt).toLocaleString()
-                    : "-";
+                    : <span className="inline-flex items-center justify-center rounded-full border-red-500 border px-2.5 py-0.5 text-red-700">
+                        <span className="whitespace-nowrap text-sm">Not Paid Yet</span>
+                      </span>;
                   const amount = `${p.currency} ${p.amount}`;
+                  const paymentStatus = p.status === 'completed' 
+                    ? <span className="inline-flex items-center justify-center rounded-full border-green-500 border px-2.5 py-0.5 text-green-700">
+                        <span className="whitespace-nowrap text-sm">Completed</span>
+                      </span>
+                    : p.status === 'pending'
+                    ? <span className="inline-flex items-center justify-center rounded-full border-amber-500 border px-2.5 py-0.5 text-amber-700">
+                        <span className="whitespace-nowrap text-sm">Pending</span>
+                      </span>
+                    : p.status === 'failed'
+                    ? <span className="inline-flex items-center justify-center rounded-full border-red-500 border px-2.5 py-0.5 text-red-700">
+                        <span className="whitespace-nowrap text-sm">Failed</span>
+                      </span>
+                    : <span className="inline-flex items-center justify-center rounded-full border-gray-500 border px-2.5 py-0.5 text-gray-700">
+                        <span className="whitespace-nowrap text-sm">Refunded</span>
+                      </span>;
                   return (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium whitespace-normal break-words max-w-[180px] md:max-w-none">{orgName}</TableCell>
-                      <TableCell className="capitalize whitespace-normal break-words">{p.status}</TableCell>
+                      <TableCell className="whitespace-normal break-words">{paymentStatus}</TableCell>
                       <TableCell className="whitespace-normal break-words">{amount}</TableCell>
                       <TableCell className="hidden md:table-cell whitespace-normal break-words">{paidAt}</TableCell>
                       <TableCell className="hidden lg:table-cell whitespace-normal break-all">{p.razorpayOrderId || "-"}</TableCell>
+                      <TableCell className="hidden lg:table-cell whitespace-normal break-all">
+                        {p.razorpayPaymentId || 
+                          <span className="inline-flex items-center justify-center rounded-full border-red-500 border px-2.5 py-0.5 text-red-700">
+                            <span className="whitespace-nowrap text-sm">Not Paid Yet</span>
+                          </span>}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
