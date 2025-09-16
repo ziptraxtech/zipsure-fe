@@ -38,7 +38,8 @@ import {
   MapPin,
   ClipboardList,
   Home,
-  Truck
+  Truck,
+  QrCode
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
@@ -48,6 +49,7 @@ import ChangePassword from '@/contexts/ChangePassword';
 import Jobs from '@/components/dashboard/forSuperadmin/Jobs';
 import RiderJobs from '@/components/dashboard/forRider/Jobs-rider';
 import NearbyChargers from '@/components/dashboard/forRider/chargers';
+import QRScannerPage from '@/components/dashboard/forRider/QRScannerPage';
 
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
@@ -75,7 +77,8 @@ type ActiveView =
   | 'reports'
   | 'history'
   | 'jobs-rider'
-  | 'nearby chargers';
+  | 'nearby chargers'
+  | 'qr-scanner';
 
 interface NavigationItem {
   id: string;
@@ -165,7 +168,8 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
         return [
           ...baseItems,
           { id: 'jobs', label: 'All Jobs', icon: ClipboardList, url: '/jobs-rider', view: 'jobs-rider' },
-          {id: 'nearby chargers', label: 'Nearby Chargers', icon: MapPin, url: '/nearby-chargers', view: 'nearby chargers' },
+          { id: 'nearby chargers', label: 'Nearby Chargers', icon: MapPin, url: '/nearby-chargers', view: 'nearby chargers' },
+          { id: 'qr scanner', label: 'QR Scanner', icon: QrCode, url: '/qr-scanner', view: 'qr-scanner' },
         ];
       
       default:
@@ -326,6 +330,8 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
         return <RiderJobs />;
       case 'nearby chargers':
         return <NearbyChargers />;
+      case 'qr-scanner':
+        return <QRScannerPage />;
       case 'dashboard':
       default:
         return (

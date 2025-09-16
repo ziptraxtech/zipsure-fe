@@ -14,6 +14,7 @@ import SuperAdmin from "./components/dashboard/SuperAdminDashboard";
 import Admin from "./components/dashboard/AdminDashboard";
 import Allocator from "./components/dashboard/AllocatorDashboard";
 import Rider from "./components/dashboard/RiderDashboard";
+import QRScannerPage from "./components/dashboard/forRider/QRScannerPage";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/allocator" element={<Allocator />} />
             <Route path="/rider" element={<Rider />} />
             <Route path="/forAdmin/subscriptions" element={<Subscriptions />} />
+            <Route path="/qr-scanner" element={<QRScannerPage />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
