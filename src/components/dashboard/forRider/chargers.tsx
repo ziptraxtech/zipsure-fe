@@ -155,17 +155,65 @@ const MapComponent = () => {
   const [map, setMap] = useState<L.Map | null>(null);
   const [routingControl, setRoutingControl] = useState<any>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const getCurrentLocation = () => {
+    return new Promise<[number, number]>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve([pos.coords.latitude, pos.coords.longitude]);
+        },
+        (error) => {
+          reject(error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 5000
+        }
+      );
+    });
+  };
 
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setPosition([pos.coords.latitude, pos.coords.longitude]);
-      },
-      (error) => {
-        console.error('Error fetching location:', error);
+    getCurrentLocation()
+      .then((coords) => {
+        setPosition(coords);
+      })
+      .catch((error) => {
+        console.error('Error fetching initial location:', error);
         setError('Failed to get your location. Please enable location services.');
+      });
+  }, []);
+
+  useEffect(() => {
+    if (position) {
+      locationIntervalRef.current = setInterval(() => {
+        getCurrentLocation()
+          .then((coords) => {
+            setPosition(coords);
+            console.log('Location updated:', coords);
+          })
+          .catch((error) => {
+            console.warn('Error updating location:', error);
+          });
+      }, 10000);
+
+      return () => {
+        if (locationIntervalRef.current) {
+          clearInterval(locationIntervalRef.current);
+          locationIntervalRef.current = null;
+        }
+      };
+    }
+  }, [position]);
+
+  useEffect(() => {
+    return () => {
+      if (locationIntervalRef.current) {
+        clearInterval(locationIntervalRef.current);
       }
-    );
+    };
   }, []);
 
   useEffect(() => {
