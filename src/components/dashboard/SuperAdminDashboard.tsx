@@ -30,7 +30,7 @@ interface Organization {
   status: string;
   phone: string;
   email: string;
-  gst: string;
+  gstNumber: string;
   address: string;
 }
 
@@ -154,7 +154,7 @@ const GlobalDashboard: React.FC = () => {
           status: org.isActive ? 'active' : 'inactive',
           phone: org.phone,
           email: org.email,
-          gst: org.gstNumber,
+          gstNumber: org.gstNumber,
           address: [org.address, org.city, org.state, org.country]
             .filter(Boolean)
             .join(', '),
@@ -194,7 +194,7 @@ const GlobalDashboard: React.FC = () => {
 
       {/* Users Section (Super Admin specific) */}
       <div id="users-section">
-        <AddUserSuperAdmin /> {/* ✅ Replaced UsersTable with AddUserSuperAdmin */}
+        <AddUserSuperAdmin />
       </div>
     </div>
   );
