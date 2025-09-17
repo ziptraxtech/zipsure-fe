@@ -22,6 +22,7 @@ interface NearbyChargerTableProps {
   currentLatitude: number;
   currentLongitude: number;
   onChargerClick: (charger: Charger, e: React.MouseEvent) => void;
+  className?: string;
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -30,6 +31,7 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
   currentLatitude,
   currentLongitude,
   onChargerClick,
+  className = ''
 }) => {
   const [chargers, setChargers] = useState<Charger[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,108 +105,87 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
     }
   };
 
-  if (loading) {
-    return (
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="w-5 h-5" />
-            Nearby Charging Stations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="mt-6">
-        <CardContent className="py-6 text-center">
-          <div className="flex flex-col items-center justify-center space-y-2">
-            <AlertCircle className="w-8 h-8 text-red-500" />
-            <p className="text-red-500">{error}</p>
-            <Button 
-              variant="outline" 
-              onClick={fetchNearbyChargers}
-              className="mt-2"
-            >
-              Retry
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="mt-6">
+    <Card className={`flex flex-col h-full ${className}`}>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Zap className="w-5 h-5" />
-            Nearby Charging Stations
-          </CardTitle>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={fetchNearbyChargers}
-            disabled={loading}
-          >
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </Button>
-        </div>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-primary" />
+          Nearby Charging Stations
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
+      <CardContent className="flex-1 overflow-hidden p-0">
+        <div className="h-full flex flex-col">
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="p-4 space-y-2">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full rounded-md" />
+                ))}
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
+                <AlertCircle className="h-8 w-8 text-destructive mb-2" />
+                <p className="text-sm">{error}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-4"
+                  onClick={fetchNearbyChargers}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : chargers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
+                <Zap className="h-8 w-8 mb-2" />
+                <p className="text-sm">No charging stations found nearby</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
               <TableHead className="md:table-cell">Name</TableHead>
               <TableHead className="md:table-cell">Address</TableHead>
               <TableHead className="hidden md:table-cell">Type</TableHead>
               <TableHead className="md:table-cell">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {chargers.length > 0 ? (
-              chargers.map((charger) => (
-                <TableRow 
-                  key={charger.id}
-                  className={`cursor-pointer hover:bg-gray-50 ${selectedChargerId === charger.id ? 'ring-2 ring-green-500' : ''}`}
-                  onClick={(e) => handleRowClick(charger, e)}
-                >
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {chargers.map((charger) => (
+                    <TableRow 
+                      key={charger.id}
+                      className={`cursor-pointer hover:bg-muted/50 ${
+                        selectedChargerId === charger.id 
+                          ? 'bg-primary/5' 
+                          : ''
+                      }`}
+                      onClick={(e) => {
+                        setSelectedChargerId(charger.id);
+                        onChargerClick(charger, e);
+                      }}
+                    >
                   <TableCell className="font-medium">{charger.name}</TableCell>
                   <TableCell className="md:table-cell min-w-[150px] max-w-[300px]">
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <span className="break-words" title={charger.address}>
-                        {charger.address}
-                      </span>
-                    </div>
-                  </TableCell>
+                            {charger.address}
+                          </span>
+                        </div>
+                      </TableCell>
                   <TableCell className="hidden md:table-cell capitalize">
                     {charger.charger_type || 'Standard'}
-                  </TableCell>
+                      </TableCell>
                   <TableCell>
                     {getStatusBadge(charger.status)}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  No charging stations found nearby
-                </TableCell>
-              </TableRow>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
-          </TableBody>
-        </Table>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
