@@ -321,8 +321,14 @@ const MapComponent = () => {
   }
 
   return (
-    <div className="flex flex-col h-full w-full p-4 space-y-4">
-      <div className="h-1/2 w-full rounded-lg overflow-hidden shadow relative z-0">
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+      {/* Gradient overlay */}
+      <div 
+        className="bg-[radial-gradient(circle_at_100%_0%,rgba(206,122,122,0.15)_0%,rgba(255,255,255,0)_70%)] pointer-events-none"
+        aria-hidden="true"
+      />
+
+      <div className="relative z-10 h-screen flex flex-col p-4 overflow-hidden h-screen ">
         <h1 className="text-2xl lg:text-3xl font-bold mb-4">Chargers Map</h1>
         <div className="h-full w-full">
           {position ? (
@@ -376,21 +382,22 @@ const MapComponent = () => {
             </div>
           )}
         </div>
-      </div>
+        <br/>
 
-      {/* Nearby Chargers Table Section */}
-      <div className="h-1/2 w-full">
-        {position ? (
-          <NearbyChargerTable 
-            currentLatitude={position[0]} 
-            currentLongitude={position[1]}
-            onChargerClick={handleChargerClick}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <p>Getting your location to find nearby chargers...</p>
-          </div>
-        )}
+        {/* Nearby Chargers Table Section */}
+        <div className="h-1/2 w-full">
+          {position ? (
+            <NearbyChargerTable 
+              currentLatitude={position[0]} 
+              currentLongitude={position[1]}
+              onChargerClick={handleChargerClick}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <p>Getting your location to find nearby chargers...</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

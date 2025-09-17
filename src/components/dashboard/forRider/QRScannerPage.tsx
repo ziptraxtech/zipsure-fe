@@ -103,6 +103,14 @@ const QRScannerPage = () => {
   };
 
   return (
+
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+      {/* Gradient overlay */}
+      <div 
+        className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_100%_0%,rgba(206,122,122,0.15)_0%,rgba(255,255,255,0)_70%] pointer-events-none"
+        aria-hidden="true"
+      />
+
     <div className="container mx-auto p-4 max-w-2xl h-screen flex flex-col">
       <div className="bg-white rounded-lg shadow-lg flex-1 flex flex-col">
         {/* Header */}
@@ -177,6 +185,7 @@ const QRScannerPage = () => {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };

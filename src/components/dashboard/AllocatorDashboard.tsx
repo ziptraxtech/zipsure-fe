@@ -244,6 +244,14 @@ const AllocatorDashboard: React.FC = () => {
     : [];
 
   return (
+
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+      {/* Gradient overlay */}
+      <div 
+        className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_100%_0%,rgba(206,122,122,0.15)_0%,rgba(255,255,255,0)_70%] pointer-events-none"
+        aria-hidden="true"
+      />
+
     <div className="space-y-6">
       {/* Header */}
       <div id="allocator-dashboard-top" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -388,6 +396,7 @@ const AllocatorDashboard: React.FC = () => {
           </Button>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 };
