@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,9 +38,9 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedChargerId, setSelectedChargerId] = useState<string | null>(null);
 
-  const fetchNearbyChargers = async () => {
+  const fetchNearbyChargers = async (lat: number, lng: number, silent: boolean = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
       
       const token = localStorage.getItem('token');
@@ -55,8 +55,8 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          currentLatitude,
-          currentLongitude
+          currentLatitude: lat,
+          currentLongitude: lng
         })
       });
 
@@ -69,17 +69,31 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
       setChargers(data);
     } catch (err) {
       console.error('Error fetching nearby chargers:', err);
-      setError(err.message || 'Failed to load nearby chargers');
+      setError((err as Error).message || 'Failed to load nearby chargers');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
+  const coordsRef = useRef({ lat: currentLatitude, lng: currentLongitude });
   useEffect(() => {
-    if (currentLatitude && currentLongitude) {
-      fetchNearbyChargers();
-    }
+    coordsRef.current = { lat: currentLatitude, lng: currentLongitude };
   }, [currentLatitude, currentLongitude]);
+
+  useEffect(() => {
+    if (!coordsRef.current.lat || !coordsRef.current.lng) return;
+
+    fetchNearbyChargers(coordsRef.current.lat, coordsRef.current.lng, false);
+
+    const intervalId = setInterval(() => {
+      const { lat, lng } = coordsRef.current;
+      if (lat && lng) {
+        fetchNearbyChargers(lat, lng, true);
+      }
+    }, 10000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -130,7 +144,7 @@ export const NearbyChargerTable: React.FC<NearbyChargerTableProps> = ({
                   variant="outline" 
                   size="sm" 
                   className="mt-4"
-                  onClick={fetchNearbyChargers}
+                  onClick={() => fetchNearbyChargers(coordsRef.current.lat, coordsRef.current.lng, false)}
                 >
                   Retry
                 </Button>

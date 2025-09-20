@@ -83,6 +83,39 @@ const ChargerLocation = new L.DivIcon({
   popupAnchor: [0, -41]
 });
 
+const SelectedChargerLocation = new L.DivIcon({
+  html: `
+    <div style="position: relative; width: 40px; height: 52px;">
+      <svg 
+        width="40" 
+        height="52" 
+        viewBox="0 0 32 41" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+        style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
+      >
+        <path 
+          d="M16 0C7.163 0 0 7.163 0 16C0 24.837 16 41 16 41C16 41 32 24.837 32 16C32 7.163 24.837 0 16 0Z" 
+          fill="#ff0000"
+          stroke="#047857"
+          stroke-width="1"
+        />
+        <g transform="translate(6, 6) scale(1.05)">
+          <path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0v-6.998a2 2 0 0 0-.59-1.42L18 5" fill="none" stroke="white" stroke-width="2"/>
+          <path d="M14 21V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16" fill="none" stroke="white" stroke-width="2"/>
+          <path d="M2 21h13" stroke="white" stroke-width="2"/>
+          <path d="M3 7h11" stroke="white" stroke-width="2"/>
+          <path d="m9 11-2 3h3l-2 3" fill="none" stroke="white" stroke-width="2"/>
+        </g>
+      </svg>
+    </div>
+  `,
+  className: 'ev-charger-marker selected',
+  iconSize: [40, 52],
+  iconAnchor: [20, 52],
+  popupAnchor: [0, -52]
+});
+
 const RouteIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
@@ -154,6 +187,8 @@ const MapComponent = () => {
   const [error, setError] = useState<string | null>(null);
   const [map, setMap] = useState<L.Map | null>(null);
   const [routingControl, setRoutingControl] = useState<any>(null);
+  const [selectedChargerId, setSelectedChargerId] = useState<string | null>(null);
+  const [selectedChargerLatLng, setSelectedChargerLatLng] = useState<[number, number] | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -276,6 +311,9 @@ const MapComponent = () => {
       return;
     }
 
+    setSelectedChargerId(charger.id);
+    setSelectedChargerLatLng([charger.latitude, charger.longitude]);
+
     console.log('Creating route from', position, 'to', [charger.latitude, charger.longitude]);
 
     if (routingControl) {
@@ -303,6 +341,27 @@ const MapComponent = () => {
       setError('Failed to create route. Please try again.');
     }
   };
+
+  useEffect(() => {
+    const currentMap = mapRef.current || map;
+    if (!position || !selectedChargerLatLng || !currentMap) return;
+
+    const newWaypoints = [
+      L.latLng(position[0], position[1]),
+      L.latLng(selectedChargerLatLng[0], selectedChargerLatLng[1])
+    ];
+
+    try {
+      if (routingControl) {
+        routingControl.setWaypoints(newWaypoints);
+      } else {
+        const control = createRoutingControl(currentMap, newWaypoints);
+        setRoutingControl(control);
+      }
+    } catch (err) {
+      console.warn('Error updating route with new position:', err);
+    }
+  }, [position, selectedChargerLatLng, map]);
 
   if (loading) {
     return (
@@ -360,7 +419,8 @@ const MapComponent = () => {
                 <Marker 
                   key={charger.id} 
                   position={[charger.latitude, charger.longitude]}
-                  icon={ChargerLocation}
+                  icon={selectedChargerId === charger.id ? SelectedChargerLocation : ChargerLocation}
+                  zIndexOffset={selectedChargerId === charger.id ? 1000 : 0}
                   eventHandlers={{
                     click: (e) => handleChargerClick(charger, e)
                   }}
