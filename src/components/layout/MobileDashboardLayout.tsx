@@ -91,7 +91,7 @@ interface NavigationItem {
 
 const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChange: (view: ActiveView) => void, orgRef: React.RefObject<HTMLDivElement>, onOpenChangePassword: () => void }) => {
   const { user, logout } = useAuth() as { user: User | null; logout: () => void };
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === 'collapsed';
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
 
@@ -110,6 +110,10 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
       : user?.name || "User";
 
   const handleNavigation = (view: ActiveView, scrollTo?: string) => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+
     if (scrollTo) {
       const element = document.getElementById(scrollTo);
       if (element) {
@@ -168,7 +172,7 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
         return [
           ...baseItems,
           { id: 'jobs', label: 'All Jobs', icon: ClipboardList, url: '/jobs-rider', view: 'jobs-rider' },
-          { id: 'nearby chargers', label: 'Nearby Chargers', icon: MapPin, url: '/nearby-chargers', view: 'nearby chargers' },
+          { id: 'nearby chargers', label: 'Nearby Chargers', icon: MapPin, url: '/Map', view: 'nearby chargers' },
           { id: 'qr scanner', label: 'QR Scanner', icon: QrCode, url: '/qr-scanner', view: 'qr-scanner' },
         ];
       
