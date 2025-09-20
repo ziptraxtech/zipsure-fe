@@ -252,7 +252,7 @@ const AllocatorDashboard: React.FC = () => {
         aria-hidden="true"
       />
 
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       {/* Header */}
       <div id="allocator-dashboard-top" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
