@@ -378,7 +378,7 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
           </header>
 
           {/* Main Content */}
-          <div className="flex-1 p-4 pt-0 overflow-y-auto">
+          <div className={`flex-1 p-4 pt-0 ${activeView === 'qr-scanner' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             {renderContent()}
           </div>
 

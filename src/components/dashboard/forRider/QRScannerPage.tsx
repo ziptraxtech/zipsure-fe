@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { QrCode, X, Camera, AlertCircle } from 'lucide-react';
+import {X, Camera, AlertCircle } from 'lucide-react';
 import jsQR from 'jsqr';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const QRScannerPage = () => {
   const videoRef = useRef(null);
@@ -10,9 +11,17 @@ const QRScannerPage = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [scannedUrl, setScannedUrl] = useState(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     return () => stopCamera();
+  }, []);
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
   }, []);
 
   const startCamera = useCallback(async () => {
@@ -81,7 +90,11 @@ const QRScannerPage = () => {
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const factor = isMobile ? 0.8 : 0.6;
+      const boxSize = Math.floor(Math.min(canvas.width, canvas.height) * factor);
+      const roiX = Math.floor((canvas.width - boxSize) / 2);
+      const roiY = Math.floor((canvas.height - boxSize) / 2);
+      const imageData = ctx.getImageData(roiX, roiY, boxSize, boxSize);
 
       const code = jsQR(imageData.data, imageData.width, imageData.height);
 
@@ -103,89 +116,105 @@ const QRScannerPage = () => {
   };
 
   return (
-
-    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+    <div className="relative h-full overflow-hidden bg-gradient-to-br from-gray-50 to-orange-50">
       {/* Gradient overlay */}
       <div 
         className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_100%_0%,rgba(206,122,122,0.15)_0%,rgba(255,255,255,0)_70%] pointer-events-none"
         aria-hidden="true"
       />
 
-    <div className="container mx-auto p-4 max-w-2xl h-screen flex flex-col">
-      <div className="bg-white rounded-lg shadow-lg flex-1 flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-3">
-            <QrCode className="h-5 w-5 text-blue-600" />
-            <h1 className="text-lg font-semibold">Scan QR</h1>
+      <div className="container mx-auto p-4 max-w-2xl h-full flex flex-col overflow-hidden">
+        <div className="bg-white rounded-lg shadow-lg flex-1 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl lg:text-3xl font-bold mb-4">Scan QR</h1>
+            </div>
+            <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Reset camera">
+              <X className="h-5 w-5 text-gray-600" />
+            </button>
           </div>
-          <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Reset camera">
-            <X className="h-5 w-5 text-gray-600" />
-          </button>
-        </div>
 
-        {/* Camera and Scanning */}
-        <div className="flex-1 flex flex-col">
-          <div className="relative flex-1 bg-black">
-            <video
-              ref={videoRef}
-              className={`w-full h-full object-cover ${isCameraOpen ? 'block' : 'hidden'}`}
-              autoPlay
-              muted
-              playsInline
-              controls={false}
-            />
+          {/* Camera and Scanning */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="relative flex-1 bg-black overflow-hidden">
+              <video
+                ref={videoRef}
+                className={`w-full h-full object-cover ${isCameraOpen ? 'block' : 'hidden'}`}
+                autoPlay
+                muted
+                playsInline
+                controls={false}
+              />
 
-            {error && (
-              <div className="absolute inset-0 h-full flex items-center justify-center">
-                <div className="text-center text-white p-6">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-400" />
-                  <p className="mb-4">{error}</p>
-                  <button onClick={startCamera} disabled={isLoading} className="px-6 py-3 bg-blue-600 text-white rounded-lg">
-                    {isLoading ? 'Loading...' : 'Try Again'}
-                  </button>
+              {error && (
+                <div className="absolute inset-0 h-full flex items-center justify-center">
+                  <div className="text-center text-white p-6">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-400" />
+                    <p className="mb-4">{error}</p>
+                    <button onClick={startCamera} disabled={isLoading} className="px-6 py-3 bg-blue-600 text-white rounded-lg">
+                      {isLoading ? 'Loading...' : 'Try Again'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {!isCameraOpen && !error && !scannedUrl && (
-              <div className="absolute inset-0 h-full flex items-center justify-center">
-                <div className="text-center text-white">
-                  <Camera className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                  <h2 className="text-xl mb-2">Ready to open camera</h2>
-                  <button onClick={startCamera} disabled={isLoading} className="px-6 py-3 bg-primary text-white rounded-lg">
-                    {isLoading ? '⏳ Loading camera...' : '📷 Open Camera'}
-                  </button>
+              {!isCameraOpen && !error && !scannedUrl && (
+                <div className="absolute inset-0 h-full flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <Camera className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                    <h2 className="text-xl mb-2">Ready to open camera</h2>
+                    <button onClick={startCamera} disabled={isLoading} className="px-6 py-3 bg-primary text-white rounded-lg">
+                      {isLoading ? '⏳ Loading camera...' : '📷 Open Camera'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {scannedUrl && (
-              <div className="absolute inset-0 h-full flex items-center justify-center bg-black bg-opacity-75 text-white p-6">
-                <div className="text-center">
-                  <p className="mb-4 break-all">Scanned URL: {scannedUrl.toLowerCase()}</p>
-                  <button
-                    onClick={() => {
-                      const url = scannedUrl.startsWith('http://') || scannedUrl.startsWith('https://')
-                        ? scannedUrl
-                        : `https://${scannedUrl}`;
-                      window.open(url, '_blank');
-                    }}
-                    className="px-6 py-3 bg-primary text-white rounded-lg mr-4"
+              {isCameraOpen && !scannedUrl && (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <div
+                    className="relative aspect-square w-[80%] md:w-[60%] max-w-[600px] rounded-xl"
+                    style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)' }}
                   >
-                    Open in Browser
-                  </button>
-
-                  <button onClick={() => setScannedUrl(null)} className="px-6 py-3 bg-gray-600 text-white rounded-lg">
-                    Scan Again
-                  </button>
+                    {/* Frame */}
+                    <div className="absolute inset-0 rounded-xl border-2 border-white/80" />
+                    {/* Corner accents */}
+                    <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg" />
+                    <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
+                    <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {scannedUrl && (
+                <div className="absolute inset-0 h-full flex items-center justify-center bg-black bg-opacity-75 text-white p-6">
+                  <div className="text-center">
+                    <p className="mb-4 break-all">Scanned URL: {scannedUrl.toLowerCase()}</p>
+                    <div className="mt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                      <button
+                        onClick={() => {
+                          const url = scannedUrl.startsWith('http://') || scannedUrl.startsWith('https://')
+                            ? scannedUrl
+                            : `https://${scannedUrl}`;
+                          window.open(url, '_blank');
+                        }}
+                        className="px-6 py-3 bg-primary text-white rounded-lg w-full sm:w-auto"
+                      >
+                        Open in Browser
+                      </button>
+                      <button onClick={() => setScannedUrl(null)} className="px-6 py-3 bg-gray-600 text-white rounded-lg w-full sm:w-auto">
+                        Scan Again
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </div>
   );
 };
