@@ -168,10 +168,7 @@ const Subscriptions = () => {
 
     <div className="p-6 space-y-6 items-center">
       <div>
-        <h1 className="text-4xl font-bold tracking-tight text-center">Subscription Plans</h1>
-        <p className="text-2xl text-muted-foreground text-center">
-          Choose the plan that fits your organization's needs
-        </p>
+        <h1 className="text-2xl lg:text-3xl font-bold mb-4">Subscription Plans</h1>
       </div>
 
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">

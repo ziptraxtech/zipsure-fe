@@ -172,7 +172,7 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
         return [
           ...baseItems,
           { id: 'jobs', label: 'All Jobs', icon: ClipboardList, url: '/jobs-rider', view: 'jobs-rider' },
-          { id: 'nearby chargers', label: 'Nearby Chargers', icon: MapPin, url: '/Map', view: 'nearby chargers' },
+          { id: 'nearby chargers', label: 'Map', icon: MapPin, url: '/Map', view: 'nearby chargers' },
           { id: 'qr scanner', label: 'QR Scanner', icon: QrCode, url: '/qr-scanner', view: 'qr-scanner' },
         ];
       
