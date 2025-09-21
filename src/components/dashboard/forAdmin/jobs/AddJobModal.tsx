@@ -153,6 +153,24 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
   const geocodingInProgress = useRef<Set<string>>(new Set());
   const abortControllers = useRef<Map<string, AbortController>>(new Map());
 
+  const stripHouseNumber = (addr: string): string => {
+    if (!addr) return addr;
+    const trimmed = addr.trim();
+    const m = trimmed.match(/^\s*\d+[A-Za-z\/-]*\s*,?\s*(.*)$/);
+    if (m && m[1]) {
+      return m[1].trim();
+    }
+    const parts = trimmed.split(",");
+    if (parts.length > 1) {
+      return parts.slice(1).join(",").trim();
+    }
+    const sp = trimmed.split(/\s+/);
+    if (sp.length > 1) {
+      return sp.slice(1).join(" ").trim();
+    }
+    return trimmed;
+  };
+
   const geocodeAddress = useCallback(async (
     address: string, 
     city: string, 
@@ -172,26 +190,50 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
     abortControllers.current.set(type, controller);
     
     try {
-      const fullAddress = `${address}, ${city}, ${state} ${pin}`;
-      const encodedAddress = encodeURIComponent(fullAddress);
-      
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=in`,
-        {
-          method: 'GET',
-          signal: controller.signal,
-          headers: {
-            'User-Agent': 'YourAppName/1.0 (your-email@example.com)',
-            'Accept': 'application/json',
-            'Accept-Language': 'en-US,en;q=0.9',
-          },
-        }
-      );
+      const addressNoHouse = stripHouseNumber(address);
 
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
-      const data = await response.json();
-      return data?.[0] ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) } : null;
+      const candidates: string[] = [];
+      candidates.push(`${address}, ${city}, ${state} ${pin}`);
+      if (addressNoHouse && addressNoHouse.toLowerCase() !== address.trim().toLowerCase()) {
+        candidates.push(`${addressNoHouse}, ${city}, ${state} ${pin}`);
+      }
+      candidates.push(`${address}, ${state} ${pin}`);
+      if (addressNoHouse && addressNoHouse.toLowerCase() !== address.trim().toLowerCase()) {
+        candidates.push(`${addressNoHouse}, ${state} ${pin}`);
+      }
+      candidates.push(`${city}, ${state} ${pin}`);
+      candidates.push(`${state} ${pin}`);
+      candidates.push(`${pin}`);
+
+      for (const fullAddress of candidates) {
+        const encodedAddress = encodeURIComponent(fullAddress);
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=in`,
+            {
+              method: 'GET',
+              signal: controller.signal,
+              headers: {
+                'User-Agent': 'YourAppName/1.0 (your-email@example.com)',
+                'Accept': 'application/json',
+                'Accept-Language': 'en-US,en;q=0.9',
+              },
+            }
+          );
+
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+          if (data?.[0]) {
+            return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+          }
+        } catch (error: any) {
+          if (error.name === 'AbortError') {
+            return null;
+          }
+          console.warn(`Geocoding attempt failed for: ${fullAddress}`, error);
+        }
+      }
+      return null;
     } catch (error: any) {
       if (error.name === 'AbortError') return null;
       console.error("Geocoding error:", error);
