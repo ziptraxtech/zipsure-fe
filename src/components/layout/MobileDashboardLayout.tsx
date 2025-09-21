@@ -29,8 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { 
   DollarSign,
-  Users, 
-  BarChart3, 
+  Users,
   Settings, 
   LogOut, 
   Shield, 
@@ -39,7 +38,8 @@ import {
   ClipboardList,
   Home,
   Truck,
-  QrCode
+  QrCode,
+  PlugZap
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
@@ -50,7 +50,7 @@ import Jobs from '@/components/dashboard/forSuperadmin/Jobs';
 import RiderJobs from '@/components/dashboard/forRider/Jobs-rider';
 import NearbyChargers from '@/components/dashboard/forRider/chargers';
 import QRScannerPage from '@/components/dashboard/forRider/QRScannerPage';
-
+import Chargers from '@/components/dashboard/forSuperadmin/allChargers';
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -78,7 +78,8 @@ type ActiveView =
   | 'history'
   | 'jobs-rider'
   | 'nearby chargers'
-  | 'qr-scanner';
+  | 'qr-scanner'
+  | 'chargers';
 
 interface NavigationItem {
   id: string;
@@ -153,7 +154,8 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
           { id: 'organizations', label: 'Organizations', icon: Building2, url: '#', view: 'organizations', scrollTo: 'organizations-section' },
           { id: 'plans', label: 'Subscription Plans', icon: Shield, url: '/plans', view: 'plans' },
           { id: 'users', label: 'All Users', icon: Users, url: '#', view: 'users', scrollTo: 'users-section' },
-          { id: 'jobs', label: 'All Jobs', icon: Truck, url: '/jobs', view: 'jobs' }
+          { id: 'jobs', label: 'All Jobs', icon: Truck, url: '/jobs', view: 'jobs' },
+          { id: 'chargers', label: 'Chargers', icon: PlugZap, url: '/chargers', view: 'chargers' }
         ];
       
       case 'admin':
@@ -336,6 +338,8 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
         return <NearbyChargers />;
       case 'qr-scanner':
         return <QRScannerPage />;
+      case 'chargers':
+        return <Chargers />;
       case 'dashboard':
       default:
         return (
