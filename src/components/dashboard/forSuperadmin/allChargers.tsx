@@ -288,7 +288,8 @@ const Chargers: React.FC = () => {
                       <div className="text-gray-700 truncate" title={c.address}>{c.address}</div>
                       {c.charger_type ? (
                         <div className="text-xs text-gray-500">{c.charger_type}</div>
-                      ) : null}
+         
+         ) : null}
                     </td>
                     <td className="px-4 py-3">{getStatusBadge(c.status)}</td>
                     <td className="px-4 py-3">{c.latitude}</td>
@@ -320,26 +321,26 @@ const Chargers: React.FC = () => {
           </DialogHeader>
           <div className="grid grid-cols-1 gap-3 py-2">
             <div>
-              <Label>Name *</Label>
+              <Label className="mb-4 block">Name *</Label>
               <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             </div>
             <div>
-              <Label>Description / Address *</Label>
+              <Label className="mb-4 block">Description / Address *</Label>
               <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Latitude *</Label>
+                <Label className="mb-4 block">Latitude *</Label>
                 <Input value={formData.latitude} onChange={(e) => setFormData({ ...formData, latitude: e.target.value })} />
               </div>
               <div>
-                <Label>Longitude *</Label>
+                <Label className="mb-4 block">Longitude *</Label>
                 <Input value={formData.longitude} onChange={(e) => setFormData({ ...formData, longitude: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Status *</Label>
+                <Label className="mb-4 block">Status *</Label>
                 <Select
                   value={formData.status}
                   onValueChange={(val) => setFormData({ ...formData, status: val as 'active' | 'inactive' })}
@@ -354,7 +355,7 @@ const Chargers: React.FC = () => {
                 </Select>
               </div>
               <div>
-                <Label>Type</Label>
+                <Label className="mb-4 block">Type</Label>
                 <Select
                   value={formData.charger_type || 'normal'}
                   onValueChange={(val) => setFormData({ ...formData, charger_type: val as 'normal' | 'fast' | 'super_fast' })}
