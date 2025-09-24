@@ -504,7 +504,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
         
         <div className="grid grid-cols-2 gap-4 py-2">
           <div>
-            <Label className="mb-2 block">Job Title *</Label>
+            <Label className="mb-4 block">Job Title *</Label>
             <Input 
               name="title" 
               value={formData.title} 
@@ -515,7 +515,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
             {fieldTouched.title && errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
           </div>
           <div>
-            <Label className="mb-2 block">Job Description *</Label>
+            <Label className="mb-4 block">Job Description *</Label>
             <Input 
               name="description" 
               value={formData.description} 
@@ -530,7 +530,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
         </div>
 
         <div className="mt-4">
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between">
             <Label className="text-lg font-semibold">Route Map</Label>
             {geocodingLoading && <span className="text-blue-500 text-sm">Locating address...</span>}
           </div>
@@ -617,7 +617,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
         </div>
 
         <div className="mt-4">
-          <Label className="mb-2 block">Schedule Date & Time</Label>
+          <Label className="mb-4 block">Schedule Date & Time</Label>
           <Input 
             type="datetime-local" 
             name="scheduleTime" 
