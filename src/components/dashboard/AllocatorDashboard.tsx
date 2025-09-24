@@ -2,9 +2,11 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Plus, Users, Truck} from "lucide-react";
+import { ClipboardList, Plus, Users, Truck, Trash2} from "lucide-react";
 import { ClipboardPenLine } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import AddJobModal from "./forAdmin/jobs/AddJobModal";
 import MetricCard from "./MetricCard";
 import {
@@ -12,6 +14,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -29,6 +32,10 @@ interface Job {
   description: string;
   status: string;
   completedAt: string | null;
+  pickupLongitude?: string;
+  pickupLatitude?: string;
+  deliveryLongitude?: string;
+  deliveryLatitude?: string;
   allocator?: {
     firstName: string;
     lastName: string;
@@ -82,6 +89,18 @@ const AllocatorDashboard: React.FC = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<string>("");
 
   const [analytics, setAnalytics] = useState<AnalyticsResponse["data"] | null>(null);
+
+  // New state for edit/delete functionality
+  const [editing, setEditing] = useState<Job | null>(null);
+  const [deleting, setDeleting] = useState<Job | null>(null);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    pickupLongitude: "",
+    pickupLatitude: "",
+    deliveryLongitude: "",
+    deliveryLatitude: ""
+  });
 
   const fetchAllJobs = async () => {
     try {
@@ -210,6 +229,89 @@ const AllocatorDashboard: React.FC = () => {
     }
   };
 
+  // New handler functions for edit/delete
+  const startEdit = (job: Job) => {
+    setEditing(job);
+    setForm({
+      title: job.title || "",
+      description: job.description || "",
+      pickupLongitude: job.pickupLongitude || "",
+      pickupLatitude: job.pickupLatitude || "",
+      deliveryLongitude: job.deliveryLongitude || "",
+      deliveryLatitude: job.deliveryLatitude || ""
+    });
+  };
+
+  const startDelete = (job: Job) => {
+    setDeleting(job);
+  };
+
+  const handleSave = async () => {
+    if (!editing) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const url = `${import.meta.env.VITE_API_URL}/api/v1/jobs/${editing.id}`;
+      
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description,
+          pickupLongitude: form.pickupLongitude,
+          pickupLatitude: form.pickupLatitude,
+          deliveryLongitude: form.deliveryLongitude,
+          deliveryLatitude: form.deliveryLatitude,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update job');
+      }
+
+      console.log('Job updated successfully');
+      fetchAllJobs(); // Refresh the jobs list
+      setEditing(null);
+      
+    } catch (error) {
+      console.error('Error updating job:', error);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleting) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const url = `${import.meta.env.VITE_API_URL}/api/v1/jobs/${deleting.id}`;
+      
+      const res = await fetch(url, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to delete job');
+      }
+
+      console.log('Job deleted successfully');
+      fetchAllJobs(); // Refresh the jobs list
+      setDeleting(null);
+      
+    } catch (error) {
+      console.error('Error deleting job:', error);
+    }
+  };
+
   const metrics = analytics
     ? [
         {
@@ -295,6 +397,7 @@ const AllocatorDashboard: React.FC = () => {
                 <TableHead className="hidden lg:table-cell font-bold">Allocator</TableHead>
                 <TableHead className="font-bold">Status</TableHead>
                 <TableHead className="font-bold">Rider & Vehicle</TableHead>
+                <TableHead className="font-bold">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -323,11 +426,31 @@ const AllocatorDashboard: React.FC = () => {
                         </Button>
                       )}
                     </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="px-3 py-1.5" 
+                          onClick={() => startEdit(job)}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          color="primary" 
+                          size="sm" 
+                          className="px-3 py-1.5" 
+                          onClick={() => startDelete(job)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="p-2 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="p-2 text-center text-muted-foreground">
                     {loadingJobs ? "Loading jobs..." : "No recent jobs"}
                   </TableCell>
                 </TableRow>
@@ -394,6 +517,59 @@ const AllocatorDashboard: React.FC = () => {
           >
             Confirm Assignment
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Job Modal */}
+      <Dialog open={!!editing} onOpenChange={() => setEditing(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Edit Job</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+            <div className="md:col-span-2">
+              <Label className="mb-4 block">Job Title</Label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="mb-4 block">Description</Label>
+              <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="mb-4 block">Pickup Longitude</Label>
+              <Input value={form.pickupLongitude} onChange={(e) => setForm({ ...form, pickupLongitude: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="mb-4 block">Pickup Latitude</Label>
+              <Input value={form.pickupLatitude} onChange={(e) => setForm({ ...form, pickupLatitude: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="mb-4 block">Drop Longitude</Label>
+              <Input value={form.deliveryLongitude} onChange={(e) => setForm({ ...form, deliveryLongitude : e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="mb-4 block">Drop Latitude</Label>
+              <Input value={form.deliveryLatitude} onChange={(e) => setForm({ ...form, deliveryLatitude: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button onClick={handleSave}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={!!deleting} onOpenChange={() => setDeleting(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <p>Do you really want to delete <span className="font-semibold">{deleting?.title}</span>?</p>
+          <DialogFooter className="flex gap-2">
+            <Button variant="secondary" onClick={() => setDeleting(null)}>No</Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>Yes, Delete</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
