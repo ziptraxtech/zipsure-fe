@@ -78,7 +78,8 @@ const OrganizationTable: React.FC<{
   isLoading: boolean;
   onEdit: (org: Organization) => void;
   onAskDelete: (org: Organization) => void;
-}> = ({ organizations, isLoading, onEdit, onAskDelete }) => {
+  isDeleting?: boolean;
+}> = ({ organizations, isLoading, onEdit, onAskDelete, isDeleting }) => {
   if (organizations.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -112,8 +113,8 @@ const OrganizationTable: React.FC<{
               <AddressDialog org={org} />
             </TableCell>
             <TableCell className="space-x-2">
-              <Button variant="outline" size="sm" onClick={() => onEdit(org)}>Edit</Button>
-              <Button color="primary" size="sm" onClick={() => onAskDelete(org)}>
+              <Button variant="outline" size="sm" onClick={() => onEdit(org)} disabled={isDeleting}>Edit</Button>
+              <Button color="primary" size="sm" onClick={() => onAskDelete(org)} disabled={isDeleting}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </TableCell>
@@ -132,6 +133,7 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [deleteOrg, setDeleteOrg] = useState<Organization | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchOrganizations = useCallback(async (): Promise<Organization[] | undefined> => {
     try {
@@ -239,23 +241,158 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
 
   const handleConfirmDelete = async () => {
     if (!deleteOrg) return;
+    
+    setIsDeleting(true);
+    
     try {
       const token = localStorage.getItem("token");
-      if (!token) return toast({ title: "Auth error", description: "Not authenticated", className: "bg-red-500 text-white", duration: 5000 });
-      const url = `${API_URL}/api/v1/organizations/${deleteOrg.id}`;
-      const res = await fetch(url, {
+      if (!token) {
+        return toast({ 
+          title: "Auth error", 
+          description: "Not authenticated", 
+          className: "bg-red-500 text-white", 
+          duration: 5000 
+        });
+      }
+
+      toast({
+        title: "Deleting...", 
+        description: "Fetching users for this organization...", 
+        className: "bg-blue-500 text-white", 
+        duration: 2000 
+      });
+
+      let relatedUsers = [];
+      let relatedJobs = [];
+      let relatedVehicles = [];
+      try {
+        const usersResponse = await fetch(`${API_URL}/api/v1/users`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
+          if (usersData.success && Array.isArray(usersData.data)) {
+            relatedUsers = usersData.data.filter((user: any) => user.organizationId === deleteOrg.id);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to fetch users:', error);
+      }
+
+      toast({
+        title: "Deleting...", 
+        description: "Fetching jobs for this organization...", 
+        className: "bg-blue-500 text-white", 
+        duration: 2000 
+      });
+
+      try {
+        const jobsResponse = await fetch(`${API_URL}/api/v1/jobs`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (jobsResponse.ok) {
+          const jobsData = await jobsResponse.json();
+          if (jobsData.success && Array.isArray(jobsData.data)) {
+            relatedJobs = jobsData.data.filter((job: any) => job.organizationId === deleteOrg.id);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to fetch jobs:', error);
+      }
+
+        if (relatedJobs.length > 0) {
+        toast({
+          title: "Deleting...", 
+          description: `Deleting ${relatedJobs.length} related jobs...`, 
+          className: "bg-blue-500 text-white", 
+          duration: 2000 
+        });
+        
+        for (const job of relatedJobs) {
+          try {
+            await fetch(`${API_URL}/api/v1/jobs/${job.id}`, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+              },
+            });
+          } catch (error) {
+            console.warn(`Failed to delete job ${job.id}:`, error);
+          }
+        }
+      }
+
+      if (relatedUsers.length > 0) {
+        toast({
+          title: "Deleting...", 
+          description: `Deleting ${relatedUsers.length} related users...`, 
+          className: "bg-blue-500 text-white", 
+          duration: 2000 
+        });
+        
+        for (const user of relatedUsers) {
+          try {
+            await fetch(`${API_URL}/api/v1/users/${user.id}`, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+              },
+            });
+          } catch (error) {
+            console.warn(`Failed to delete user ${user.id}:`, error);
+          }
+        }
+      }
+
+      toast({
+        title: "Deleting...", 
+        description: "Deleting organization...", 
+        className: "bg-blue-500 text-white", 
+        duration: 2000 
+      });
+
+      const orgResponse = await fetch(`${API_URL}/api/v1/organizations/${deleteOrg.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
         },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      toast({ title: 'Deleted', description: 'Organization deleted successfully', className: "bg-red-500 text-white", duration: 5000 });
+
+      if (!orgResponse.ok) {
+        throw new Error(`Failed to delete organization: HTTP ${orgResponse.status}`);
+      }
+
+      toast({ 
+        title: 'Success!', 
+        description: `Organization deleted with ${relatedUsers.length} users, ${relatedJobs.length} jobs, and ${relatedVehicles.length} vehicles`, 
+        className: "bg-green-500 text-white", 
+        duration: 5000 
+      });
+      
       setDeleteOrg(null);
       await loadOrganizations();
+      
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message || 'Failed to delete organization', className: "bg-red-500 text-white", duration: 5000 });
+      console.error('Delete error:', err);
+      toast({ 
+        title: 'Error', 
+        description: err.message || 'Failed to delete organization and related data', 
+        className: "bg-red-500 text-white", 
+        duration: 5000 
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -283,6 +420,7 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
           isLoading={isLoadingState} 
           onEdit={(org) => setEditingOrg(org)}
           onAskDelete={(org) => setDeleteOrg(org)}
+          isDeleting={isDeleting} 
         />
       </div>
 
@@ -336,16 +474,38 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Modal */}
-      <Dialog open={!!deleteOrg} onOpenChange={() => setDeleteOrg(null)}>
+      {/* UPDATED: Delete Confirmation Modal with enhanced messaging */}
+      <Dialog open={!!deleteOrg} onOpenChange={() => !isDeleting && setDeleteOrg(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
           </DialogHeader>
-          <p>Do you really want to delete <span className="font-semibold">{deleteOrg?.name}</span>?</p>
+          <div className="space-y-2">
+            <p>Do you really want to delete <span className="font-semibold">{deleteOrg?.name}</span>?</p>
+            <p className="text-sm text-muted-foreground">
+              ⚠️ This will also delete all related users, jobs, and vehicles associated with this organization.
+            </p>
+            {isDeleting && (
+              <p className="text-sm text-blue-600 font-medium">
+                Please wait while we process the deletion...
+              </p>
+            )}
+          </div>
           <DialogFooter className="flex gap-2">
-            <Button variant="secondary" onClick={() => setDeleteOrg(null)}>No</Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>Yes, Delete</Button>
+            <Button 
+              variant="secondary" 
+              onClick={() => setDeleteOrg(null)}
+              disabled={isDeleting}
+            >
+              No
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
