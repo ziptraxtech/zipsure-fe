@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import {X, Camera, AlertCircle } from 'lucide-react';
+import {X, Camera, AlertCircle, SwitchCamera } from 'lucide-react';
 import jsQR from 'jsqr';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -11,11 +11,16 @@ const QRScannerPage = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [scannedUrl, setScannedUrl] = useState(null);
+  const [facingMode, setFacingMode] = useState('environment'); // 'environment' = back camera, 'user' = front camera
+  const [availableCameras, setAvailableCameras] = useState([]);
   const isMobile = useIsMobile();
 
   useEffect(() => {
+    // Check available cameras on component mount
+    checkAvailableCameras();
     return () => stopCamera();
   }, []);
+
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -24,13 +29,32 @@ const QRScannerPage = () => {
     };
   }, []);
 
-  const startCamera = useCallback(async () => {
+  const checkAvailableCameras = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      setAvailableCameras(videoDevices);
+    } catch (err) {
+      console.error('Error checking cameras:', err);
+    }
+  };
+
+  const startCamera = useCallback(async (requestedFacingMode = facingMode) => {
     setIsLoading(true);
     setError(null);
 
     try {
+      // Stop existing camera first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+        video: { 
+          facingMode: requestedFacingMode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
         audio: false,
       });
 
@@ -40,14 +64,22 @@ const QRScannerPage = () => {
       await videoRef.current.play();
       setIsCameraOpen(true);
       setIsLoading(false);
+      setFacingMode(requestedFacingMode);
 
       scanQRCode();
     } catch (err) {
       console.error('Camera error:', err);
-      setError('Failed to access camera');
+      setError(`Failed to access ${requestedFacingMode === 'environment' ? 'back' : 'front'} camera`);
       setIsLoading(false);
     }
-  }, []);
+  }, [facingMode]);
+
+  const toggleCamera = useCallback(async () => {
+    if (!isCameraOpen || availableCameras.length < 2) return;
+    
+    const newFacingMode = facingMode === 'environment' ? 'user' : 'environment';
+    await startCamera(newFacingMode);
+  }, [isCameraOpen, facingMode, availableCameras.length, startCamera]);
 
   const stopCamera = useCallback(() => {
     if (videoRef.current && videoRef.current._eventListeners) {
@@ -147,14 +179,37 @@ const QRScannerPage = () => {
                 controls={false}
               />
 
+              {/* Camera Toggle Button */}
+              {isCameraOpen &&  !scannedUrl && (
+                <button
+                  onClick={toggleCamera}
+                  className="absolute top-4 right-4 p-3 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full transition-all duration-200 z-10"
+                  title={`Switch to ${facingMode === 'environment' ? 'front' : 'back'} camera`}
+                  disabled={isLoading}
+                >
+                  <SwitchCamera className="h-5 w-5 text-white" />
+                </button>
+              )}
+
               {error && (
                 <div className="absolute inset-0 h-full flex items-center justify-center">
                   <div className="text-center text-white p-6">
                     <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-400" />
                     <p className="mb-4">{error}</p>
-                    <button onClick={startCamera} disabled={isLoading} className="px-6 py-3 bg-blue-600 text-white rounded-lg">
-                      {isLoading ? 'Loading...' : 'Try Again'}
-                    </button>
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => startCamera(facingMode)} disabled={isLoading} className="px-6 py-3 bg-blue-600 text-white rounded-lg">
+                        {isLoading ? 'Loading...' : 'Try Again'}
+                      </button>
+                      {availableCameras.length > 1 && (
+                        <button 
+                          onClick={() => startCamera(facingMode === 'environment' ? 'user' : 'environment')} 
+                          disabled={isLoading} 
+                          className="px-6 py-3 bg-green-600 text-white rounded-lg"
+                        >
+                          Try {facingMode === 'environment' ? 'Front' : 'Back'} Camera
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -164,7 +219,10 @@ const QRScannerPage = () => {
                   <div className="text-center text-white">
                     <Camera className="h-16 w-16 mx-auto mb-4 text-gray-400" />
                     <h2 className="text-xl mb-2">Ready to open camera</h2>
-                    <button onClick={startCamera} disabled={isLoading} className="px-6 py-3 bg-primary text-white rounded-lg">
+                    <p className="text-sm text-gray-300 mb-4">
+                      {availableCameras.length > 1 ? `${availableCameras.length} cameras available` : 'Camera ready'}
+                    </p>
+                    <button onClick={() => startCamera()} disabled={isLoading} className="px-6 py-3 bg-primary text-white rounded-lg">
                       {isLoading ? '⏳ Loading camera...' : '📷 Open Camera'}
                     </button>
                   </div>
@@ -184,6 +242,7 @@ const QRScannerPage = () => {
                     <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
                     <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
                     <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
+                    
                   </div>
                 </div>
               )}
