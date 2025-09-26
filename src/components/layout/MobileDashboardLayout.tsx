@@ -159,7 +159,8 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
           { id: 'plans', label: 'Subscription Plans', icon: Shield, url: '/plans', view: 'plans' },
           { id: 'users', label: 'All Users', icon: Users, url: '#', view: 'users', scrollTo: 'users-section' },
           { id: 'jobs', label: 'All Jobs', icon: Truck, url: '/jobs', view: 'jobs' },
-          { id: 'chargers', label: 'Chargers', icon: PlugZap, url: '/chargers', view: 'chargers' }
+          { id: 'chargers', label: 'Chargers', icon: PlugZap, url: '/chargers', view: 'chargers' },
+          { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' }
         ];
       
       case 'admin':
