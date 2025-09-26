@@ -300,7 +300,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
               disabled={isSubmitting}
               type="button"
             >
-              {isSubmitting ? "Updating..." : "Update User"}
+              {isSubmitting ? "Updating..." : "Save"}
             </Button>
           </div>
         </DialogFooter>

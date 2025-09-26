@@ -157,7 +157,6 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
         localStorage.removeItem("id");
 
-        // Reset form and close dialog
         setUserData({
           firstName: "",
           lastName: "",
@@ -167,7 +166,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
           role: "admin",
         });
         onOpenChange(false);
-        onUserCreated?.(); // Call the callback to refresh the users table
+        onUserCreated?.();
       } else {
         toast({
           title: "Invalid Input",
@@ -277,7 +276,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="rider">Rider</SelectItem>
-                <SelectItem value="allocator">Allocator</SelectItem>
+                <SelectItem value="allocator">Fleet Manager</SelectItem>
               </SelectContent>
             </Select>
           </div>

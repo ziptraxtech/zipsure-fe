@@ -212,7 +212,7 @@ const RecentJobsTable: React.FC<RecentJobsTableProps> = ({ recentJobs, fetchAllJ
               <TableHead className="hidden md:table-cell">Sr. no.</TableHead>
               <TableHead>Job Title</TableHead>
               <TableHead className="hidden md:table-cell">Job Description</TableHead>
-              <TableHead className="hidden lg:table-cell">Allocator</TableHead>
+              <TableHead className="hidden lg:table-cell">Fleet Manager</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden md:table-cell">Completed</TableHead>
               <TableHead>Rider & Vehicle</TableHead>

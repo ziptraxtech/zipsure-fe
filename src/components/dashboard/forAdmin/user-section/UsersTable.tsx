@@ -378,7 +378,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                     <TableCell>{(user.firstName || "—") + " " + (user.lastName || "—")}</TableCell>
                     <TableCell className="hidden md:table-cell">{user.email || "—"}</TableCell>
                     <TableCell className="hidden md:table-cell">{user.phone || "—"}</TableCell>
-                    <TableCell className="capitalize">{user.role || "—"}</TableCell>
+                    <TableCell className="capitalize">{user.role === "allocator" ? "Fleet Manager" : (user.role || "—")}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -510,7 +510,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="rider">Rider</SelectItem>
-                  <SelectItem value="allocator">Allocator</SelectItem>
+                  <SelectItem value="allocator">Fleet Manager</SelectItem>
                 </SelectContent>
               </Select>
             </div>

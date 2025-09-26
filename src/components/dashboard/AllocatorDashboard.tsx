@@ -394,7 +394,7 @@ const AllocatorDashboard: React.FC = () => {
                 <TableHead className="hidden md:table-cell font-bold">Sr. no.</TableHead>
                 <TableHead className="font-bold">Job Title</TableHead>
                 <TableHead className="hidden md:table-cell font-bold">Job Description</TableHead>
-                <TableHead className="hidden lg:table-cell font-bold">Allocator</TableHead>
+                <TableHead className="hidden lg:table-cell font-bold">Fleet Manager</TableHead>
                 <TableHead className="font-bold">Status</TableHead>
                 <TableHead className="font-bold">Rider & Vehicle</TableHead>
                 <TableHead className="font-bold">Action</TableHead>

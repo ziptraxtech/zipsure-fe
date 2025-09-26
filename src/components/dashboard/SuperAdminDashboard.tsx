@@ -179,7 +179,7 @@ const GlobalDashboard: React.FC = () => {
       />
       
       {/* Content */}
-      <div className="relative z-10 space-y-6 p-6">
+      <div className="relative z-10 space-y-6 p-4">
         {/* Header */}
         <div id="dashboard-top" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
           <div>

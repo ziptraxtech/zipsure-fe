@@ -46,7 +46,7 @@ const getStatusBadge = (status: string) => {
 const AddressDialog: React.FC<{ org: Organization }> = ({ org }) => (
   <Dialog>
     <DialogTrigger asChild>
-      <Button variant="outline" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 text-xs">
+      <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 text-xs">
         View
       </Button>
     </DialogTrigger>

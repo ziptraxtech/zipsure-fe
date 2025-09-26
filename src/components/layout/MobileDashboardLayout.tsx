@@ -226,7 +226,7 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
                 <p className="text-sm font-medium truncate">{fullName}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant={getRoleBadgeVariant(user?.role)} className="text-xs">
-                    {user?.role || 'user'}
+                {user?.role === "allocator" ? "Fleet Manager" : (user?.role || "user")}
                   </Badge>
                 </div>
                 {user?.organizationName && (
