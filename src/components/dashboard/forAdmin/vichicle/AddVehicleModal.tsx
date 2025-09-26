@@ -178,13 +178,12 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
         payload,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      // ✅ pass the new vehicle back immediately
       onVehicleAdded(response.data.data);
 
       onClose();
