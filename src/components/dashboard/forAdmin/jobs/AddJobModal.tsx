@@ -407,7 +407,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
                 value={formData[fullFieldName] || ''}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`${complete ? `border-${color}-500` : ''} ${touched && error ? 'border-red-500' : ''}`}
+                className={`bg-gray-100${complete ? `border-${color}-500` : ''} ${touched && error ? 'border-red-500' : ''}`}
                 type={inputType}
                 maxLength={name === 'Pin' ? 6 : undefined}
               />
@@ -510,7 +510,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
               value={formData.title} 
               onChange={handleChange}
               onBlur={handleBlur}
-              className={fieldTouched.title && errors.title ? 'border-red-500' : ''}
+              className={`bg-gray-100 ${fieldTouched.title && errors.title ? 'border-red-500' : ''}`}
             />
             {fieldTouched.title && errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
           </div>
@@ -521,7 +521,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
               value={formData.description} 
               onChange={handleChange}
               onBlur={handleBlur}
-              className={fieldTouched.description && errors.description ? 'border-red-500' : ''}
+              className={`bg-gray-100 ${fieldTouched.description && errors.description ? 'border-red-500' : ''}`}
             />
             {fieldTouched.description && errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
           </div>
@@ -623,7 +623,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ open, onClose, onJobAdded }) 
             name="scheduleTime" 
             value={formData.scheduleTime} 
             onChange={handleChange} 
-            className="w-1/1.5 cursor-pointer" 
+            className="bg-gray-100 w-1/1.5 cursor-pointer" 
             onClick={(e) => e.currentTarget.showPicker?.()}
           />
         </div>

@@ -322,20 +322,20 @@ const Chargers: React.FC = () => {
           <div className="grid grid-cols-1 gap-3 py-2">
             <div>
               <Label className="mb-4 block">Name *</Label>
-              <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              <Input className="bg-gray-100" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             </div>
             <div>
               <Label className="mb-4 block">Description / Address *</Label>
-              <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
+              <Input className="bg-gray-100" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="mb-4 block">Latitude *</Label>
-                <Input value={formData.latitude} onChange={(e) => setFormData({ ...formData, latitude: e.target.value })} />
+                <Input className="bg-gray-100" value={formData.latitude} onChange={(e) => setFormData({ ...formData, latitude: e.target.value })} />
               </div>
               <div>
                 <Label className="mb-4 block">Longitude *</Label>
-                <Input value={formData.longitude} onChange={(e) => setFormData({ ...formData, longitude: e.target.value })} />
+                <Input className="bg-gray-100" value={formData.longitude} onChange={(e) => setFormData({ ...formData, longitude: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

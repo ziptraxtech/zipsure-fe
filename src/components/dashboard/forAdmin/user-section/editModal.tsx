@@ -215,7 +215,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
               name="firstName"
               value={formData.firstName}
               onChange={handleInputChange}
-              className={`${errors.firstName ? "border-red-500" : ""}`}
+              className={`bg-gray-100 ${errors.firstName ? "border-red-500" : ""}`}
               placeholder="Enter first name"
               disabled={isSubmitting}
               required
@@ -229,7 +229,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
               name="lastName"
               value={formData.lastName}
               onChange={handleInputChange}
-              className={`${errors.lastName ? "border-red-500" : ""}`}
+              className={`bg-gray-100 ${errors.lastName ? "border-red-500" : ""}`}
               placeholder="Enter last name"
               disabled={isSubmitting}
               required
@@ -244,7 +244,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className={`${errors.email ? "border-red-500" : ""}`}
+              className={`bg-gray-100 ${errors.email ? "border-red-500" : ""}`}
               placeholder="Enter email address"
               disabled={isSubmitting}
               required
@@ -258,7 +258,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
-              className={`${errors.phone ? "border-red-500" : ""}`}
+              className={`bg-gray-100 ${errors.phone ? "border-red-500" : ""}`}
               placeholder="Enter phone number"
               disabled={isSubmitting}
             />
@@ -272,7 +272,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
               onValueChange={handleRoleChange}
               disabled={isSubmitting}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full bg-gray-100">
                 <SelectValue placeholder="Select Role" />
               </SelectTrigger>
               <SelectContent>
