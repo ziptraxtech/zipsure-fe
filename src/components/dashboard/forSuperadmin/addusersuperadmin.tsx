@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Plus } from "lucide-react";
+import { Users, Plus, Trash2} from "lucide-react";
 import { DownloadCSV } from "./downloadcsv";
+import { EditModal } from "../forAdmin/user-section/editModal"; 
 import {
   Dialog,
   DialogContent,
@@ -38,19 +39,29 @@ export interface SuperAdminUser {
   firstName: string;
   lastName: string;
   email: string;
+  organizationId: string;
   phone: string;
   role: string;
   isActive: boolean;
 }
 
+interface Organization {
+  id: string;
+  name: string;
+}
+
 const AddUserSuperAdmin: React.FC = () => {
   const [users, setUsers] = useState<SuperAdminUser[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     firstName: "",
     lastName: "",
+    organizationId: "",
     email: "",
     password: "",
     phone: "",
@@ -65,8 +76,15 @@ const AddUserSuperAdmin: React.FC = () => {
   const totalPages = Math.ceil(users.length / usersPerPage);
 
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [deleteUser, setDeleteUser] = useState<{ id: string; name: string } | null>(null);
+  const [editUser, setEditUser] = useState<SuperAdminUser | null>(null);
 
-  const validateField = (name: string, value: string) => {
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef(true);
+
+  const validateField = (name: string, value: string, currentRole?: string) => {
     let error = "";
 
     if (name === "phone") {
@@ -80,6 +98,7 @@ const AddUserSuperAdmin: React.FC = () => {
         error = "Invalid email format";
       }
     }
+    
     if (name === "password") {
       const hasUppercase = /[A-Z]/.test(value);
       const hasLowercase = /[a-z]/.test(value);
@@ -88,6 +107,13 @@ const AddUserSuperAdmin: React.FC = () => {
       if (value.length < 8 || !hasUppercase || !hasLowercase || !hasNumber) {
         error =
           "Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, and one number";
+      }
+    }
+
+    if (name === "organizationId") {
+      const roleToCheck = currentRole || newUser.role;
+      if (roleToCheck !== "superadmin" && (!value || value.trim() === "")) {
+        error = "Organization is required for this role";
       }
     }
 
@@ -102,12 +128,64 @@ const AddUserSuperAdmin: React.FC = () => {
 
   const handleRoleChange = (value: string) => {
     setNewUser({ ...newUser, role: value });
+    
+      if (value === "superadmin") {
+      setNewUser(prev => ({ ...prev, role: value, organizationId: "" }));
+      setErrors(prev => ({ ...prev, organizationId: "" }));
+    }
+    
+    validateField("organizationId", newUser.organizationId, value);
+  };
+
+  const handleOrganizationChange = (value: string) => {
+    setNewUser({ ...newUser, organizationId: value });
+    validateField("organizationId", value, newUser.role);
+  };
+
+  const resetForm = () => {
+    setNewUser({
+      firstName: "",
+      lastName: "",
+      organizationId: "",
+      email: "",
+      password: "",
+      phone: "",
+      role: "admin",
+    });
+    setErrors({});
   };
 
   const handleSubmit = async () => {
-    Object.entries(newUser).forEach(([key, value]) => {
-      validateField(key, value);
+    setIsSubmitting(true);
+    
+    const baseRequiredFields = ['firstName', 'lastName', 'email', 'password', 'phone'];
+    const fieldsToValidate = newUser.role === 'superadmin' 
+      ? baseRequiredFields 
+      : [...baseRequiredFields, 'organizationId'];
+    
+    let hasErrors = false;
+
+    fieldsToValidate.forEach((field) => {
+      const value = newUser[field as keyof typeof newUser];
+      if (!value || value.trim() === "") {
+        const fieldName = field === 'organizationId' ? 'Organization' : field.charAt(0).toUpperCase() + field.slice(1);
+        setErrors(prev => ({ ...prev, [field]: `${fieldName} is required` }));
+        hasErrors = true;
+      } else {
+        validateField(field, value, newUser.role);
+      }
     });
+
+    if (hasErrors) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        className: "bg-red-500 text-white",
+        duration: 5000,
+      });
+      setIsSubmitting(false);
+      return;
+    }
 
     if (Object.values(errors).some((err) => err)) {
       toast({
@@ -116,6 +194,7 @@ const AddUserSuperAdmin: React.FC = () => {
         className: "bg-red-500 text-white",
         duration: 5000,
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -128,19 +207,23 @@ const AddUserSuperAdmin: React.FC = () => {
           className: "bg-red-500 text-white",
           duration: 5000,
         });
+        setIsSubmitting(false);
         return;
       }
 
+      const requestPayload = {
+        email: newUser.email,
+        password: newUser.password,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        phone: newUser.phone,
+        role: newUser.role,
+        ...(newUser.role !== "superadmin" && { organizationId: newUser.organizationId })
+      };
+
       const res = await axios.post(
         `${API_URL}/api/v1/auth/register`,
-        {
-          email: newUser.email,
-          password: newUser.password,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-          phone: newUser.phone,
-          role: newUser.role,
-        },
+        requestPayload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -149,8 +232,6 @@ const AddUserSuperAdmin: React.FC = () => {
         }
       );
 
-      const createdUser: SuperAdminUser = res.data.data; // take new user from response
-
       toast({
         title: "Success",
         duration: 5000,
@@ -158,29 +239,21 @@ const AddUserSuperAdmin: React.FC = () => {
         className: "bg-green-500 text-white",
       });
 
-      setUsers((prev) => [...prev, createdUser]);
       await fetchUsers();
 
       setIsAddUserOpen(false);
-      setNewUser({
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "",
-        phone: "",
-        role: "admin",
-      });
-      setErrors({});
-
-      setCurrentPage(Math.ceil((users.length + 1) / usersPerPage));
+      resetForm();
+      const newTotalPages = Math.ceil((users.length + 1) / usersPerPage);
+      setCurrentPage(newTotalPages);
+      
     } catch (error: any) {
-      console.error(error);
+      console.error("Error creating user:", error);
       const status = error.response?.status;
 
       if (status === 500) {
         toast({
-          title: "Error",
-          description: "Something went wrong.",
+          title: "Server Error",
+          description: "Something went wrong on the server.",
           className: "bg-red-500 text-white",
           duration: 5000,
         });
@@ -207,20 +280,34 @@ const AddUserSuperAdmin: React.FC = () => {
           className: "bg-red-500 text-white whitespace-pre-line",
           duration: 7000,
         });
+      } else if (status === 409) {
+        toast({
+          title: "Conflict Error",
+          description: "User with this email already exists.",
+          className: "bg-red-500 text-white",
+          duration: 5000,
+        });
       } else {
         toast({
           title: "Error",
-          description: "User not created.",
+          description: "Failed to create user. Please try again.",
           className: "bg-red-500 text-white",
           duration: 5000,
         });
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (isAutoRefresh = false) => {
     try {
-      setLoading(true);
+      if (isAutoRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       const token = localStorage.getItem("token");
       if (!token) return;
 
@@ -228,18 +315,158 @@ const AddUserSuperAdmin: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (Array.isArray(res.data.data)) {
+      if (Array.isArray(res.data.data) && mountedRef.current) {
         setUsers(res.data.data);
+        setLastRefreshed(new Date());
       }
     } catch (err) {
       console.error("Failed to fetch users", err);
+      if (mountedRef.current && !isAutoRefresh) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch users.",
+          className: "bg-red-500 text-white",
+          duration: 5000,
+        });
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        if (isAutoRefresh) {
+          setIsRefreshing(false);
+        } else {
+          setLoading(false);
+        }
+      }
     }
   };
 
-  React.useEffect(() => {
+  const fetchOrganizations = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const res = await axios.get(`${API_URL}/api/v1/organizations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (Array.isArray(res.data.data)) {
+        setOrganizations(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch organizations", err);
+      toast({
+        title: "Error",
+        description: "Failed to fetch organizations.",
+        className: "bg-red-500 text-white",
+        duration: 5000,
+      });
+    }
+  };
+
+  const handleManualRefresh = () => {
+    fetchUsers(false);
+  };
+
+  const startAutoRefresh = () => {
+    stopAutoRefresh(); 
+    refreshIntervalRef.current = setInterval(() => {
+      fetchUsers(true);
+    }, 30000); 
+  };
+
+  const stopAutoRefresh = () => {
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
+    }
+  };
+
+  const onEdit = (user: SuperAdminUser) => {
+    setEditUser(user);
+  };
+
+  const onAskDelete = (user: SuperAdminUser) => {
+    setDeleteUser({
+      id: user.id,
+      name: `${user.firstName} ${user.lastName}`
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteUser) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast({
+          title: "Authentication error",
+          description: "You are not authenticated.",
+          className: "bg-red-500 text-white",
+          duration: 5000,
+        });
+        return;
+      }
+
+      await axios.delete(`${API_URL}/api/v1/users/${deleteUser.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setUsers(prev => prev.filter(user => user.id !== deleteUser.id));
+      
+      toast({
+        title: "Success",
+        description: "User deleted successfully!",
+        className: "bg-green-500 text-white",
+        duration: 5000,
+      });
+
+      setDeleteUser(null);
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user.",
+        className: "bg-red-500 text-white",
+        duration: 5000,
+      });
+    }
+  };
+
+  const getOrganizationName = (orgId: string) => {
+    const organization = organizations.find(org => org.id === orgId);
+    return organization?.name || orgId || "—";
+  };
+
+  const formatLastRefreshed = () => {
+    if (!lastRefreshed) return "";
+    return lastRefreshed.toLocaleTimeString();
+  };
+
+  useEffect(() => {
     fetchUsers();
+    fetchOrganizations();
+    startAutoRefresh();
+
+    return () => {
+      mountedRef.current = false;
+      stopAutoRefresh();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopAutoRefresh();
+      } else {
+        startAutoRefresh();
+        fetchUsers(true); 
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const startIndex = (currentPage - 1) * usersPerPage;
@@ -251,9 +478,12 @@ const AddUserSuperAdmin: React.FC = () => {
       <Card className="shadow-sm border rounded-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />Users
-            </CardTitle>
+            <div className="flex flex-col gap-1">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Users
+              </CardTitle>
+            </div>
             <div className="flex gap-2">
               <DownloadCSV 
                 endpoint="users"
@@ -273,10 +503,12 @@ const AddUserSuperAdmin: React.FC = () => {
               <TableRow>
                 <TableHead className="hidden md:table-cell">S.No</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Organization</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
                 <TableHead className="hidden md:table-cell">Phone</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Active</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -291,6 +523,9 @@ const AddUserSuperAdmin: React.FC = () => {
                         " " +
                         (user.lastName || "—")}
                     </TableCell>
+                    <TableCell className="whitespace-normal break-words">
+                      {getOrganizationName(user.organizationId)}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell whitespace-normal break-words">
                       {user.email || "—"}
                     </TableCell>
@@ -298,7 +533,7 @@ const AddUserSuperAdmin: React.FC = () => {
                       {user.phone || "—"}
                     </TableCell>
                     <TableCell className="capitalize whitespace-normal break-words">
-                      {user.role || "—"}
+                      {user.role === "allocator" ? "Fleet Manager" : (user.role || "—")}
                     </TableCell>
                     <TableCell>
                       {user.isActive ? (
@@ -317,12 +552,20 @@ const AddUserSuperAdmin: React.FC = () => {
                         </Badge>
                       )}
                     </TableCell>
+                    <TableCell className="space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => onEdit(user)}>
+                        Edit
+                      </Button>
+                      <Button color="primary" size="sm" onClick={() => onAskDelete(user)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={8}
                     className="p-4 text-center text-muted-foreground"
                   >
                     {loading ? "Loading users..." : "No users found"}
@@ -333,106 +576,146 @@ const AddUserSuperAdmin: React.FC = () => {
           </Table>
 
           {/* Pagination */}
-          <div className="flex justify-center gap-2 mt-4">
-            <Button
-              size="sm"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => prev - 1)}
-            >
-              Previous
-            </Button>
-            <span className="px-2 py-1 text-sm font-medium">
-              {currentPage} / {totalPages}
-            </span>
-            <Button
-              size="sm"
-              disabled={currentPage === totalPages || totalPages === 0}
-              onClick={() => setCurrentPage((prev) => prev + 1)}
-            >
-              Next
-            </Button>
-          </div>
+          {totalPages > 1 && (
+            <div className="flex justify-center gap-2 mt-4">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => prev - 1)}
+              >
+                Previous
+              </Button>
+              <span className="px-2 py-1 text-sm font-medium">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((prev) => prev + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Add User Modal */}
       <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add New User (Super Admin)</DialogTitle>
+            <DialogTitle>Add New User</DialogTitle>
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
             <div>
-              <Label className="mb-4 block">First Name</Label>
+              <Label className="mb-2 block">First Name</Label>
               <Input
                 name="firstName"
                 value={newUser.firstName}
                 onChange={handleInputChange}
-                className="bg-gray-100"
+                className={`bg-gray-100 ${errors.firstName ? "border-red-500" : ""}`}
                 required
               />
+              {errors.firstName && (
+                <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
+              )}
             </div>
+            
             <div>
-              <Label className="mb-4 block">Last Name</Label>
+              <Label className="mb-2 block">Last Name</Label>
               <Input
                 name="lastName"
                 value={newUser.lastName}
                 onChange={handleInputChange}
-                className="bg-gray-100"
+                className={`bg-gray-100 ${errors.lastName ? "border-red-500" : ""}`}
                 required
               />
+              {errors.lastName && (
+                <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>
+              )}
             </div>
 
             <div>
-              <Label className="mb-4 block">Email</Label>
+              <Label className="mb-2 block">Email</Label>
               <Input
                 type="email"
                 name="email"
                 value={newUser.email}
                 onChange={handleInputChange}
-                className={`bg-gray-100 ${
-                  errors.email ? "border-red-500" : ""
-                }`}
+                className={`bg-gray-100 ${errors.email ? "border-red-500" : ""}`}
                 required
               />
               {errors.email && (
-                <p className="text-red-500 text-sm">{errors.email}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
               )}
             </div>
+            
             <div>
-              <Label className="mb-4 block">Password</Label>
+              <Label className="mb-2 block">Password   *</Label>
               <Input
                 type="password"
                 name="password"
                 value={newUser.password}
                 onChange={handleInputChange}
-                className={`bg-gray-100 ${
-                  errors.password ? "border-red-500" : ""
-                }`}
+                className={`bg-gray-100 ${errors.password ? "border-red-500" : ""}`}
                 required
               />
               {errors.password && (
-                <p className="text-red-500 text-sm">{errors.password}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
               )}
             </div>
 
             <div>
-              <Label className="mb-4 block">Phone</Label>
+              <Label className="mb-2 block">Phone</Label>
               <Input
                 name="phone"
                 value={newUser.phone}
                 onChange={handleInputChange}
-                className={`bg-gray-100 ${
-                  errors.phone ? "border-red-500" : ""
-                }`}
+                className={`bg-gray-100 ${errors.phone ? "border-red-500" : ""}`}
+                maxLength={10}
               />
               {errors.phone && (
-                <p className="text-red-500 text-sm">{errors.phone}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
               )}
             </div>
+
             <div>
-              <Label className="mb-4 block">Role</Label>
+              <Label className="mb-2 block">
+                Organization {newUser.role !== "superadmin" && "*"}
+              </Label>
+              <Select 
+                value={newUser.organizationId} 
+                onValueChange={handleOrganizationChange}
+                disabled={newUser.role === "superadmin"}
+              >
+                <SelectTrigger className={`bg-gray-100 ${errors.organizationId ? "border-red-500" : ""} ${newUser.role === "superadmin" ? "opacity-50 cursor-not-allowed" : ""}`}>
+                  <SelectValue placeholder={
+                    newUser.role === "superadmin" 
+                      ? "Not required for Super Admin" 
+                      : "Select Organization"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.organizationId && (
+                <p className="text-red-500 text-sm mt-1">{errors.organizationId}</p>
+              )}
+              {newUser.role === "superadmin" && (
+                <p className="text-gray-500 text-sm mt-1">Super Admins are not tied to specific organizations</p>
+              )}
+            </div>
+
+            <div>
+              <Label className="mb-2 block">Role</Label>
               <Select value={newUser.role} onValueChange={handleRoleChange}>
                 <SelectTrigger className="bg-gray-100">
                   <SelectValue placeholder="Select Role" />
@@ -441,30 +724,51 @@ const AddUserSuperAdmin: React.FC = () => {
                   <SelectItem value="superadmin">Super Admin</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="rider">Rider</SelectItem>
-                  <SelectItem value="allocator">Allocator</SelectItem>
+                  <SelectItem value="allocator">Fleet Manager</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <DialogFooter className="mt-4 flex justify-end gap-2">
+          <DialogFooter className="mt-6 flex justify-end gap-2">
             <Button
-              variant="secondary"
+              variant="outline"
               onClick={() => {
-                setNewUser({
-                  firstName: "",
-                  lastName: "",
-                  email: "",
-                  password: "",
-                  phone: "",
-                  role: "superAdmin",
-                });
-                setErrors({});
+                setIsAddUserOpen(false);
+                resetForm();
               }}
+              disabled={isSubmitting}
             >
-              Clear
+              Cancel
             </Button>
-            <Button onClick={handleSubmit}>Add User</Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Adding..." : "Add User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Modal */}
+      <EditModal
+        isOpen={!!editUser}
+        onClose={() => setEditUser(null)}
+        user={editUser}
+        onSuccess={fetchUsers}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={!!deleteUser} onOpenChange={() => setDeleteUser(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <p>Do you really want to delete <span className="font-semibold">{deleteUser?.name}</span>?</p>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setDeleteUser(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
