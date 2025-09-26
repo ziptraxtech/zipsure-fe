@@ -210,7 +210,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
           <div>
-            <Label className="mb-2 block">First Name</Label>
+            <Label className="mb-4 block">First Name</Label>
             <Input
               name="firstName"
               value={formData.firstName}
@@ -224,7 +224,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
           </div>
           
           <div>
-            <Label className="mb-2 block">Last Name</Label>
+            <Label className="mb-4 block">Last Name</Label>
             <Input
               name="lastName"
               value={formData.lastName}
@@ -238,7 +238,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
           </div>
 
           <div>
-            <Label className="mb-2 block">Email</Label>
+            <Label className="mb-4 block">Email</Label>
             <Input
               type="email"
               name="email"
@@ -253,7 +253,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
           </div>
           
           <div>
-            <Label className="mb-2 block">Phone</Label>
+            <Label className="mb-4 block">Phone</Label>
             <Input
               name="phone"
               value={formData.phone}
@@ -266,7 +266,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
           </div>
           
           <div>
-            <Label className="mb-2 block">Role</Label>
+            <Label className="mb-4 block">Role</Label>
             <Select 
               value={formData.role} 
               onValueChange={handleRoleChange}

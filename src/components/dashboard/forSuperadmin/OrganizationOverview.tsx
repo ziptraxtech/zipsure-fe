@@ -433,27 +433,27 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
           {editingOrg && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
               <div>
-                <Label className="mb-2 block">Name</Label>
+                <Label className="mb-4 block">Name</Label>
                 <Input className="bg-gray-100" value={editingOrg.name} onChange={(e) => setEditingOrg({ ...editingOrg, name: e.target.value })} />
               </div>
               <div>
-                <Label className="mb-2 block">Phone</Label>
+                <Label className="mb-4 block">Phone</Label>
                 <Input className="bg-gray-100" value={editingOrg.phone} onChange={(e) => setEditingOrg({ ...editingOrg, phone: e.target.value })} />
               </div>  
               <div>
-                <Label className="mb-2 block">Email</Label>
+                <Label className="mb-4 block">Email</Label>
                 <Input type="email" className="bg-gray-100" value={editingOrg.email} onChange={(e) => setEditingOrg({ ...editingOrg, email: e.target.value })} />
               </div>
               <div>
-                <Label className="mb-2 block">GST Number</Label>
+                <Label className="mb-4 block">GST Number</Label>
                 <Input className="bg-gray-100" value={editingOrg.gstNumber === 'N/A' ? '' : editingOrg.gstNumber} onChange={(e) => setEditingOrg({ ...editingOrg, gstNumber: e.target.value })} />
               </div>
               <div className="md:col-span-2">
-                <Label className="mb-2 block">Address</Label>
+                <Label className="mb-4 block">Address</Label>
                 <Input className="bg-gray-100" value={editingOrg.address} onChange={(e) => setEditingOrg({ ...editingOrg, address: e.target.value })} />
               </div>
               <div>
-                <Label className="mb-2 block">Status</Label>
+                <Label className="mb-4 block">Status</Label>
                 <Select value={editingOrg.status} onValueChange={(v) => setEditingOrg({ ...editingOrg, status: v })}>
                   <SelectTrigger className="bg-gray-100">
                     <SelectValue placeholder="Select status" />

@@ -611,7 +611,7 @@ const AddUserSuperAdmin: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
             <div>
-              <Label className="mb-2 block">First Name</Label>
+              <Label className="mb-4 block">First Name</Label>
               <Input
                 name="firstName"
                 value={newUser.firstName}
@@ -625,7 +625,7 @@ const AddUserSuperAdmin: React.FC = () => {
             </div>
             
             <div>
-              <Label className="mb-2 block">Last Name</Label>
+              <Label className="mb-4 block">Last Name</Label>
               <Input
                 name="lastName"
                 value={newUser.lastName}
@@ -639,7 +639,7 @@ const AddUserSuperAdmin: React.FC = () => {
             </div>
 
             <div>
-              <Label className="mb-2 block">Email</Label>
+              <Label className="mb-4 block">Email</Label>
               <Input
                 type="email"
                 name="email"
@@ -654,7 +654,7 @@ const AddUserSuperAdmin: React.FC = () => {
             </div>
             
             <div>
-              <Label className="mb-2 block">Password   *</Label>
+              <Label className="mb-4 block">Password   *</Label>
               <Input
                 type="password"
                 name="password"
@@ -669,7 +669,7 @@ const AddUserSuperAdmin: React.FC = () => {
             </div>
 
             <div>
-              <Label className="mb-2 block">Phone</Label>
+              <Label className="mb-4 block">Phone</Label>
               <Input
                 name="phone"
                 value={newUser.phone}
@@ -683,7 +683,7 @@ const AddUserSuperAdmin: React.FC = () => {
             </div>
 
             <div>
-              <Label className="mb-2 block">
+              <Label className="mb-4 block">
                 Organization {newUser.role !== "superadmin" && "*"}
               </Label>
               <Select 
@@ -715,7 +715,7 @@ const AddUserSuperAdmin: React.FC = () => {
             </div>
 
             <div>
-              <Label className="mb-2 block">Role</Label>
+              <Label className="mb-4 block">Role</Label>
               <Select value={newUser.role} onValueChange={handleRoleChange}>
                 <SelectTrigger className="bg-gray-100">
                   <SelectValue placeholder="Select Role" />
