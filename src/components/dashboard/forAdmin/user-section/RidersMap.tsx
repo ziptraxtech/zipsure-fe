@@ -1,0 +1,454 @@
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Users, Phone, Mail, MapPin, RefreshCw } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+const defaultIcon = L.Icon.Default.prototype as any;
+delete defaultIcon._getIconUrl;
+
+const RiderLocation = new L.DivIcon({
+  html: `
+    <div style="position: relative; width: 32px; height: 41px;">
+      <svg 
+        width="32" 
+        height="41" 
+        viewBox="0 0 32 41" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path 
+          d="M16 0C7.163 0 0 7.163 0 16C0 24.837 16 41 16 41C16 41 32 24.837 32 16C32 7.163 24.837 0 16 0Z" 
+          fill="#6366f1"
+          stroke="#4f46e5"
+          stroke-width="1"
+        />
+        <g transform="translate(8, 8)">
+          <circle cx="8" cy="7" r="3" fill="white" stroke="white" stroke-width="1"/>
+          <path d="M2 21c0-3.5 2.5-7 6-7s6 3.5 6 7" fill="none" stroke="white" stroke-width="2"/>
+        </g>
+      </svg>
+    </div>
+  `,
+  className: 'rider-marker',
+  iconSize: [32, 41],
+  iconAnchor: [16, 41],
+  popupAnchor: [0, -41]
+});
+
+const SelectedRiderLocation = new L.DivIcon({
+  html: `
+    <div style="position: relative; width: 40px; height: 52px;">
+      <svg 
+        width="40" 
+        height="52" 
+        viewBox="0 0 32 41" 
+        fill="none" 
+        xmlns="http://www.w3.org/2000/svg"
+        style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
+      >
+        <path 
+          d="M16 0C7.163 0 0 7.163 0 16C0 24.837 16 41 16 41C16 41 32 24.837 32 16C32 7.163 24.837 0 16 0Z" 
+          fill="#ef4444"
+          stroke="#dc2626"
+          stroke-width="1"
+        />
+        <g transform="translate(8, 8) scale(1.1)">
+          <circle cx="8" cy="7" r="3" fill="white" stroke="white" stroke-width="1"/>
+          <path d="M2 21c0-3.5 2.5-7 6-7s6 3.5 6 7" fill="none" stroke="white" stroke-width="2"/>
+        </g>
+      </svg>
+    </div>
+  `,
+  className: 'rider-marker selected',
+  iconSize: [40, 52],
+  iconAnchor: [20, 52],
+  popupAnchor: [0, -52]
+});
+
+interface Rider {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  latitude: number;
+  longitude: number;
+  isActive: boolean;
+  role: string;
+}
+
+interface Charger {
+  id: string;
+  name: string;
+  location: string;
+  distance: string;
+  status: 'available' | 'occupied' | 'maintenance';
+  type: string;
+  power: string;
+}
+
+const MapController = ({ riders, selectedRiderId }: { riders: Rider[]; selectedRiderId: string | null }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (riders.length > 0) {
+      const bounds = L.latLngBounds(riders.map(rider => [rider.latitude, rider.longitude]));
+      map.fitBounds(bounds, { padding: [20, 20] });
+    }
+  }, [riders, map]);
+
+  useEffect(() => {
+    if (selectedRiderId) {
+      const selectedRider = riders.find(rider => rider.id === selectedRiderId);
+      if (selectedRider) {
+        map.setView([selectedRider.latitude, selectedRider.longitude], 15, {
+          animate: true,
+          duration: 1
+        });
+      }
+    }
+  }, [selectedRiderId, riders, map]);
+
+  return null;
+};
+
+const RidersMap = () => {
+  const [riders, setRiders] = useState<Rider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRiderId, setSelectedRiderId] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [chargers] = useState<Charger[]>([
+    {
+      id: '1',
+      name: 'City Mall Charging Station',
+      location: 'Sector 14, Gurgaon',
+      distance: '0.5 km',
+      status: 'available',
+      type: 'Fast Charging',
+      power: '50kW'
+    },
+    {
+      id: '2',
+      name: 'Metro Station Charger',
+      location: 'Huda City Centre',
+      distance: '1.2 km',
+      status: 'occupied',
+      type: 'Rapid Charging',
+      power: '120kW'
+    },
+    {
+      id: '3',
+      name: 'Shopping Complex',
+      location: 'MG Road, Sector 28',
+      distance: '2.1 km',
+      status: 'available',
+      type: 'Standard Charging',
+      power: '22kW'
+    },
+    {
+      id: '4',
+      name: 'Business Park Hub',
+      location: 'Cyber City, DLF Phase 3',
+      distance: '3.5 km',
+      status: 'maintenance',
+      type: 'Fast Charging',
+      power: '75kW'
+    }
+  ]);
+
+  const fetchRiders = useCallback(async (isAutoRefresh = false) => {
+    try {
+      if (isAutoRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${API_URL}/api/v1/users`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          throw new Error('Session expired. Please log in again.');
+        }
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        const ridersWithLocation = data.data.filter((user: any) => 
+          user.role === 'rider' && 
+          user.latitude && 
+          user.longitude &&
+          !isNaN(parseFloat(user.latitude)) &&
+          !isNaN(parseFloat(user.longitude))
+        ).map((rider: any) => ({
+          ...rider,
+          latitude: parseFloat(rider.latitude),
+          longitude: parseFloat(rider.longitude)
+        }));
+        
+        setRiders(ridersWithLocation);
+        setLastUpdated(new Date());
+        setError(null);
+      } else {
+        throw new Error('Invalid data format received from server');
+      }
+    } catch (err: any) {
+      console.error('Error in fetchRiders:', err);
+      setError(`Failed to load rider locations: ${err.message}`);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRiders(false);
+  }, [fetchRiders]);
+  useEffect(() => {
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+    }
+    refreshIntervalRef.current = setInterval(() => {
+      fetchRiders(true);
+    }, 60000);
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [fetchRiders]);
+
+  const handleRiderClick = (rider: Rider) => {
+    setSelectedRiderId(rider.id);
+  };
+
+  const handleRiderSelect = (riderId: string) => {
+    setSelectedRiderId(riderId);
+  };
+
+  const handleManualRefresh = () => {
+    fetchRiders(true);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'text-green-500 border-green-500 bg-green-50';
+      case 'occupied':
+        return 'text-red-500 border-red-500 bg-red-50';
+      case 'maintenance':
+        return 'text-yellow-500 border-yellow-500 bg-yellow-50';
+      default:
+        return 'text-gray-500 border-gray-500 bg-gray-50';
+    }
+  };
+
+  const formatLastUpdated = (date: Date | null) => {
+    if (!date) return 'Never';
+    return date.toLocaleTimeString();
+  };
+
+  if (loading && !refreshing) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p>Loading rider locations...</p>
+      </div>
+    );
+  }
+
+  if (error && riders.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center space-y-4">
+          <p style={{ color: 'red' }}>{error}</p>
+          <button 
+            onClick={() => fetchRiders(false)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (riders.length === 0 && !loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p>No riders with location data found.</p>
+      </div>
+    );
+  }
+
+  const defaultCenter: [number, number] = riders.length > 0 
+    ? [riders[0].latitude, riders[0].longitude] 
+    : [28.6139, 77.2090]; 
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+      <div className="p-4 space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+          <h1 className="text-2xl lg:text-3xl font-bold">Riders Map</h1> 
+        </div>
+        
+        {/* Map Section */}
+        <div className="w-full">
+          <div className="h-96 rounded-lg overflow-hidden shadow-md ">
+            <MapContainer 
+              center={defaultCenter} 
+              zoom={10} 
+              style={{ height: '100%', width: '100%', zIndex: 0, position: 'relative' }}
+              className="leaflet-container"
+              ref={mapRef}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              
+              <MapController riders={riders} selectedRiderId={selectedRiderId} />
+              
+              {/* Rider markers */}
+              {riders.map((rider) => (
+                <Marker 
+                  key={rider.id} 
+                  position={[rider.latitude, rider.longitude]}
+                  icon={selectedRiderId === rider.id ? SelectedRiderLocation : RiderLocation}
+                  zIndexOffset={selectedRiderId === rider.id ? 1000 : 0}
+                  eventHandlers={{
+                    click: () => handleRiderClick(rider)
+                  }}
+                >
+                  <Popup>
+                    <div className="space-y-2 min-w-[200px]">
+                      <h4 className="font-semibold text-base">
+                        {rider.firstName} {rider.lastName}
+                      </h4>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail className="h-3 w-3 text-gray-500" />
+                          <span className="text-gray-700">{rider.email}</span>
+                        </div>
+                        {rider.phone && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="h-3 w-3 text-gray-500" />
+                            <span className="text-gray-700">{rider.phone}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-sm">
+                          <MapPin className="h-3 w-3 text-gray-500" />
+                          <span className="text-gray-700">
+                            {rider.latitude.toFixed(4)}, {rider.longitude.toFixed(4)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="pt-2">
+                        <Badge
+                          variant="outline"
+                          className={`${
+                            rider.isActive 
+                              ? "text-green-500 border-green-500" 
+                              : "text-red-500 border-red-500"
+                          }`}
+                        >
+                          {rider.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+        </div>
+
+        {/* Riders Section */}
+        <div className="w-full">
+          <Card className="shadow-md border rounded-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Users className="h-5 w-5" /> 
+                Riders ({riders.length})
+                {refreshing && (
+                  <RefreshCw className="h-4 w-4 animate-spin text-blue-500 ml-2" />
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {riders.map((rider) => (
+                  <div 
+                    key={rider.id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                      selectedRiderId === rider.id 
+                        ? 'bg-blue-50 border-blue-300 shadow-md' 
+                        : 'bg-white hover:bg-gray-50'
+                    }`}
+                    onClick={() => handleRiderSelect(rider.id)}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <h4 className="font-semibold text-sm">
+                        {rider.firstName} {rider.lastName}
+                      </h4>
+                      <Badge
+                        variant="outline"
+                        className={`${
+                          rider.isActive 
+                            ? "text-green-500 border-green-500" 
+                            : "text-red-500 border-red-500"
+                        }`}
+                      >
+                        {rider.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <Mail className="h-3 w-3" />
+                        <span className="truncate">{rider.email}</span>
+                      </div>
+                      {rider.phone && (
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <Phone className="h-3 w-3" />
+                          <span>{rider.phone}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RidersMap;

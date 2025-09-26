@@ -39,7 +39,8 @@ import {
   Home,
   Truck,
   QrCode,
-  PlugZap
+  PlugZap,
+  Map
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
@@ -51,6 +52,8 @@ import RiderJobs from '@/components/dashboard/forRider/Jobs-rider';
 import NearbyChargers from '@/components/dashboard/forRider/chargers';
 import QRScannerPage from '@/components/dashboard/forRider/QRScannerPage';
 import Chargers from '@/components/dashboard/forSuperadmin/allChargers';
+import RidersMap from '@/components/dashboard/forAdmin/user-section/RidersMap';
+
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -79,7 +82,8 @@ type ActiveView =
   | 'jobs-rider'
   | 'nearby chargers'
   | 'qr-scanner'
-  | 'chargers';
+  | 'chargers'
+  | 'riders-map';
 
 interface NavigationItem {
   id: string;
@@ -162,12 +166,14 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
         return [
           ...baseItems,
           { id: 'subscriptions', label: 'Subscriptions', icon: DollarSign, url: '/subscriptions', view: 'subscriptions' },
-          { id: 'users', label: 'Team Members', icon: Users, url: '#', view: 'users', scrollTo: 'admin-users-section' }
+          { id: 'users', label: 'Team Members', icon: Users, url: '#', view: 'users', scrollTo: 'admin-users-section' },
+          { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' }
         ];
       case 'allocator':
         return [
           ...baseItems,
           { id: 'jobs', label: 'Job Allocation', icon: ClipboardList, url: '#', view: 'jobs', scrollTo: 'allocator-jobs-section' },
+          { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' }
         ];
       
       case 'rider':
@@ -225,9 +231,9 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{fullName}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={getRoleBadgeVariant(user?.role)} className="text-xs">
+                <Badge variant={getRoleBadgeVariant(user?.role)} className="text-xs">
                 {user?.role === "allocator" ? "Fleet Manager" : (user?.role || "user")}
-                  </Badge>
+                </Badge>
                 </div>
                 {user?.organizationName && (
                   <p className="text-xs text-muted-foreground truncate mt-1">
@@ -301,10 +307,8 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const { user } = useAuth() as { user: User | null };
 
-  // ✅ Ref for organizations section
   const orgRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Get initials
   const getUserInitials = (): string => {
     try {
       const stored = localStorage.getItem("user");
@@ -318,7 +322,6 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
         }
       }
     } catch {
-      // Ignore parsing errors
     }
     if (user?.name) return user.name.substring(0, 2).toUpperCase();
     return "U";
@@ -340,6 +343,8 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
         return <QRScannerPage />;
       case 'chargers':
         return <Chargers />;
+      case 'riders-map':
+        return <RidersMap />;
       case 'dashboard':
       default:
         return (
@@ -382,7 +387,7 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
           </header>
 
           {/* Main Content */}
-          <div className={`flex-1 p-4 pt-0 ${activeView === 'qr-scanner' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+          <div className={`flex-1 p-4 pt-0 ${activeView === 'qr-scanner' || activeView === 'riders-map' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             {renderContent()}
           </div>
 
