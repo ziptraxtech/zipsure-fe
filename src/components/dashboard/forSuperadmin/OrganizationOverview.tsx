@@ -257,103 +257,11 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
 
       toast({
         title: "Deleting...", 
-        description: "Fetching users for this organization...", 
+        description: "Fetching related data for this organization...", 
         className: "bg-blue-500 text-white", 
         duration: 2000 
       });
-
-      let relatedUsers = [];
-      let relatedJobs = [];
-      let relatedVehicles = [];
-      try {
-        const usersResponse = await fetch(`${API_URL}/api/v1/users`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-          },
-        });
-        
-        if (usersResponse.ok) {
-          const usersData = await usersResponse.json();
-          if (usersData.success && Array.isArray(usersData.data)) {
-            relatedUsers = usersData.data.filter((user: any) => user.organizationId === deleteOrg.id);
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to fetch users:', error);
-      }
-
-      toast({
-        title: "Deleting...", 
-        description: "Fetching jobs for this organization...", 
-        className: "bg-blue-500 text-white", 
-        duration: 2000 
-      });
-
-      try {
-        const jobsResponse = await fetch(`${API_URL}/api/v1/jobs`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-          },
-        });
-        
-        if (jobsResponse.ok) {
-          const jobsData = await jobsResponse.json();
-          if (jobsData.success && Array.isArray(jobsData.data)) {
-            relatedJobs = jobsData.data.filter((job: any) => job.organizationId === deleteOrg.id);
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to fetch jobs:', error);
-      }
-
-        if (relatedJobs.length > 0) {
-        toast({
-          title: "Deleting...", 
-          description: `Deleting ${relatedJobs.length} related jobs...`, 
-          className: "bg-blue-500 text-white", 
-          duration: 2000 
-        });
-        
-        for (const job of relatedJobs) {
-          try {
-            await fetch(`${API_URL}/api/v1/jobs/${job.id}`, {
-              method: 'DELETE',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json',
-              },
-            });
-          } catch (error) {
-            console.warn(`Failed to delete job ${job.id}:`, error);
-          }
-        }
-      }
-
-      if (relatedUsers.length > 0) {
-        toast({
-          title: "Deleting...", 
-          description: `Deleting ${relatedUsers.length} related users...`, 
-          className: "bg-blue-500 text-white", 
-          duration: 2000 
-        });
-        
-        for (const user of relatedUsers) {
-          try {
-            await fetch(`${API_URL}/api/v1/users/${user.id}`, {
-              method: 'DELETE',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json',
-              },
-            });
-          } catch (error) {
-            console.warn(`Failed to delete user ${user.id}:`, error);
-          }
-        }
-      }
-
+       
       toast({
         title: "Deleting...", 
         description: "Deleting organization...", 
@@ -375,7 +283,7 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
 
       toast({ 
         title: 'Success!', 
-        description: `Organization deleted with ${relatedUsers.length} users, ${relatedJobs.length} jobs, and ${relatedVehicles.length} vehicles`, 
+        description: `Organization "${deleteOrg.name}" and all related data deleted successfully`, 
         className: "bg-green-500 text-white", 
         duration: 5000 
       });
@@ -474,7 +382,7 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
         </DialogContent>
       </Dialog>
 
-      {/* UPDATED: Delete Confirmation Modal with enhanced messaging */}
+      {/* Delete Confirmation Modal with enhanced messaging */}
       <Dialog open={!!deleteOrg} onOpenChange={() => !isDeleting && setDeleteOrg(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
