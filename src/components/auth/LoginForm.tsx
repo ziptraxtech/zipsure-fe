@@ -24,12 +24,6 @@ const LoginForm = () => {
     navigate('/');
   };
 
-  const demoAccounts = [
-    { role: 'superadmin', email: 'superadmin@zipsure.ai', password: 'password123' },
-    { role: 'admin', email: 'admin@demologistics.com', password: 'password123' },
-    { role: 'allocator', email: 'allocator@demologistics.com', password: 'password123' },
-    { role: 'rider', email: 'rider1@demologistics.com', password: 'password123' }
-  ];
 
   const fillDemo = (email: string, password: string) => {
     setCredentials({ email, password });
@@ -105,34 +99,6 @@ const LoginForm = () => {
                 )}
               </Button>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* Demo Accounts */}
-        <Card className="fleet-card-gradient">
-          <CardHeader>
-            <CardTitle className="text-lg">Demo Accounts</CardTitle>
-            <CardDescription>
-              Click any account below to auto-fill credentials
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {demoAccounts.map((account, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="w-full justify-start text-left h-auto py-3"
-                  onClick={() => fillDemo(account.email, account.password)}
-                  type="button"
-                >
-                  <div>
-                    <div className="font-medium">{account.role}</div>
-                    <div className="text-sm text-muted-foreground">{account.email}</div>
-                  </div>
-                </Button>
-              ))}
-            </div>
           </CardContent>
         </Card>
       </div>
