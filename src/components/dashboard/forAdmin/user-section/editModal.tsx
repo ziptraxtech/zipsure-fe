@@ -278,7 +278,7 @@ export const EditModal = ({ isOpen, onClose, user, onSuccess }: EditModalProps) 
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="rider">Rider</SelectItem>
-                <SelectItem value="allocator">Allocator</SelectItem>
+                <SelectItem value="allocator">Fleet Manager</SelectItem>
               </SelectContent>
             </Select>
             {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role}</p>}

@@ -363,6 +363,11 @@ const AddUserSuperAdmin: React.FC = () => {
     }
   };
 
+  const handleAddUserClick = async () => {
+    await fetchOrganizations();
+    setIsAddUserOpen(true);
+  };
+
   const handleManualRefresh = () => {
     fetchUsers(false);
   };
@@ -491,7 +496,8 @@ const AddUserSuperAdmin: React.FC = () => {
                 onDownloadStart={() => setIsDownloading(true)}
                 onDownloadComplete={() => setIsDownloading(false)}
               />
-              <Button size="sm" onClick={() => setIsAddUserOpen(true)}>
+              {/* handleAddUserClick function */}
+              <Button size="sm" onClick={handleAddUserClick}>
                 <Plus className="h-4 w-4 mr-1" /> Add
               </Button>
             </div>
