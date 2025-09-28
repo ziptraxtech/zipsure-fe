@@ -19,17 +19,17 @@ export function DownloadCSV({
   const API_URL = import.meta.env.VITE_API_URL;
 
   const getDefaultFilename = () => {
-    const filenames = {
-      organizations: 'organizations_export.csv',
-      users: 'users_export.csv',
-      payments: 'payments_export.csv',
-      jobs: 'jobs_export.csv'
+    const filenames: Record<typeof endpoint, string> = {
+      organizations: "organizations_export.csv",
+      users: "users_export.csv",
+      payments: "payments_export.csv",
+      jobs: "jobs_export.csv",
     };
     return filenames[endpoint];
   };
 
   const getSuccessMessage = () => {
-    const messages = {
+    const messages: Record<typeof endpoint, string> = {
       organizations: "Organizations data has been downloaded successfully.",
       users: "Users data has been downloaded successfully.",
       payments: "Payments data has been downloaded successfully.",
@@ -47,44 +47,43 @@ export function DownloadCSV({
         throw new Error('No authentication token found');
       }
 
-      const endpointPaths = {
-        organizations: 'organizations/csv',
-        users: 'users/csv',
-        payments: 'payments/superadmin/csv',
-        jobs: 'jobs/superadmin/csv'
+      const endpointPaths: Record<typeof endpoint, string> = {
+        organizations: "organizations/csv",
+        users: "users/csv",
+        payments: "payments/superadmin/csv",
+        jobs: "jobs/superadmin/csv",
       };
 
       const response = await fetch(`${API_URL}/api/v1/${endpointPaths[endpoint]}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = getDefaultFilename();
-      
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1].replace(/['"]/g, '');
-        }
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const blob = await response.blob();
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+
+        if ((window as any).Android?.saveCSV) {
+          // Call Android interface
+          (window as any).Android.saveCSV(base64data, getDefaultFilename());
+        } else {
+          // Fallback for desktop browsers
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', filename);
+          link.download = getDefaultFilename();
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+        }
+      };
+
+      reader.readAsDataURL(blob);
       
       onDownloadComplete?.();
       
