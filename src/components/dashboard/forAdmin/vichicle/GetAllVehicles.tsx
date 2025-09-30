@@ -1,10 +1,22 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Trash2, Pencil } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -20,6 +32,12 @@ interface Vehicle {
   color: string;
   status: string;
   createdAt: string;
+  vehicleCategoryId: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 interface Props {
@@ -33,6 +51,7 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [form, setForm] = useState({
     vehicleNumber: "",
     vehicleType: "",
@@ -40,7 +59,8 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
     make: "",
     year: "",
     color: "",
-    status: "active",
+    status: "Active",
+    vehicleCategoryId: "",
   });
 
   const fetchVehicles = () => {
@@ -62,10 +82,39 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
       .finally(() => setLoading(false));
   };
 
+  const fetchCategories = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/v1/vehicle-categories`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setCategories(response.data.data || response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch vehicle categories",
+        variant: "destructive",
+        duration: 5000,
+        className: "bg-red-500 text-white",
+      });
+    }
+  };
+
+  const getCategoryNameById = (id: string) => {
+    const category = categories.find((c) => c.id === id);
+    return category?.name || "-";
+  };
+
   useEffect(() => {
     if (!open) return;
 
     fetchVehicles();
+    fetchCategories();
   }, [open]);
 
   const openEdit = (v: Vehicle) => {
@@ -77,7 +126,8 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
       make: v.make || "",
       year: String(v.year ?? ""),
       color: v.color || "",
-      status: v.status || "active",
+      status: v.status || "Active",
+      vehicleCategoryId: v.vehicleCategoryId || "",
     });
   };
 
@@ -85,7 +135,12 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
     if (!editing) return;
     const token = localStorage.getItem("token");
     if (!token) {
-      toast({ title: "Auth error", description: "Not authenticated", className: "bg-red-500 text-white", duration: 5000 });
+      toast({
+        title: "Auth error",
+        description: "Not authenticated",
+        className: "bg-red-500 text-white",
+        duration: 5000,
+      });
       return;
     }
     try {
@@ -97,16 +152,30 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
         year: Number(form.year),
         color: form.color.trim(),
         status: form.status,
+        vehicleCategoryId: form.vehicleCategoryId,
       };
       await axios.put(`${API_URL}/api/v1/vehicles/${editing.id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      toast({ title: "Updated", description: "Vehicle updated successfully", className: "bg-green-500 text-white", duration: 5000 });
+      toast({
+        title: "Updated",
+        description: "Vehicle updated successfully",
+        className: "bg-green-500 text-white",
+        duration: 5000,
+      });
       setEditing(null);
       fetchVehicles();
     } catch (err: any) {
-      const message = err?.response?.data?.message || err.message || "Failed to update vehicle";
-      toast({ title: "Error", description: message, className: "bg-red-500 text-white", duration: 5000 });
+      const message =
+        err?.response?.data?.message ||
+        err.message ||
+        "Failed to update vehicle";
+      toast({
+        title: "Error",
+        description: message,
+        className: "bg-red-500 text-white",
+        duration: 5000,
+      });
     }
   };
 
@@ -114,19 +183,37 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
     if (!deleteTarget) return;
     const token = localStorage.getItem("token");
     if (!token) {
-      toast({ title: "Auth error", description: "Not authenticated", className: "bg-red-500 text-white", duration: 5000 });
+      toast({
+        title: "Auth error",
+        description: "Not authenticated",
+        className: "bg-red-500 text-white",
+        duration: 5000,
+      });
       return;
     }
     try {
       await axios.delete(`${API_URL}/api/v1/vehicles/${deleteTarget.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      toast({ title: "Deleted", description: "Vehicle deleted successfully", className: "bg-green-500 text-white", duration: 5000 });
+      toast({
+        title: "Deleted",
+        description: "Vehicle deleted successfully",
+        className: "bg-green-500 text-white",
+        duration: 5000,
+      });
       setDeleteTarget(null);
       fetchVehicles();
     } catch (err: any) {
-      const message = err?.response?.data?.message || err.message || "Failed to delete vehicle";
-      toast({ title: "Error", description: message, className: "bg-red-500 text-white", duration: 5000 });
+      const message =
+        err?.response?.data?.message ||
+        err.message ||
+        "Failed to delete vehicle";
+      toast({
+        title: "Error",
+        description: message,
+        className: "bg-red-500 text-white",
+        duration: 5000,
+      });
     }
   };
 
@@ -153,6 +240,7 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
                   <tr className="border-b bg-primary">
                     <th className="px-4 py-2 ">Vehicle Number</th>
                     <th className="px-4 py-2 ">Type</th>
+                    <th className="px-4 py-2 ">Category</th>
                     <th className="px-4 py-2 ">Model</th>
                     <th className="px-4 py-2 ">Year</th>
                     <th className="px-4 py-2 ">Color</th>
@@ -166,17 +254,30 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
                     <tr key={v.id} className="text-center border-b">
                       <td className="px-4 py-2 ">{v.vehicleNumber}</td>
                       <td className="px-4 py-2 ">{v.vehicleType}</td>
+                      <td className="px-4 py-2 ">
+                        {getCategoryNameById(v.vehicleCategoryId)}
+                      </td>
                       <td className="px-4 py-2 ">{v.model}</td>
                       <td className="px-4 py-2 ">{v.year}</td>
                       <td className="px-4 py-2 ">{v.color}</td>
                       <td className="px-4 py-2 ">{v.status}</td>
-                      <td className="px-4 py-2 ">{new Date(v.createdAt).toLocaleString()}</td>
+                      <td className="px-4 py-2 ">
+                        {new Date(v.createdAt).toLocaleString()}
+                      </td>
                       <td className="px-4 py-2 ">
                         <div className="flex items-center justify-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => openEdit(v)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEdit(v)}
+                          >
                             <Pencil className="h-4 w-4 mr-1" /> Edit
                           </Button>
-                          <Button color="primary" size="sm" onClick={() => setDeleteTarget(v)}>
+                          <Button
+                            color="primary"
+                            size="sm"
+                            onClick={() => setDeleteTarget(v)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -199,11 +300,20 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
             <div>
               <Label className="mb-4 block">Vehicle Number</Label>
-              <Input value={form.vehicleNumber} onChange={(e) => setForm({ ...form, vehicleNumber: e.target.value })} />
+              <Input
+                value={form.vehicleNumber}
+                className="bg-gray-100"
+                onChange={(e) =>
+                  setForm({ ...form, vehicleNumber: e.target.value })
+                }
+              />
             </div>
             <div>
               <Label className="mb-4 block">Type</Label>
-              <Select value={form.vehicleType} onValueChange={(v) => setForm({ ...form, vehicleType: v })}>
+              <Select
+                value={form.vehicleType}
+                onValueChange={(v) => setForm({ ...form, vehicleType: v })}
+              >
                 <SelectTrigger className="bg-gray-100">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
@@ -218,23 +328,64 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
             </div>
             <div>
               <Label className="mb-4 block">Model</Label>
-              <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
+              <Input
+                value={form.model}
+                className="bg-gray-100"
+                onChange={(e) => setForm({ ...form, model: e.target.value })}
+              />
             </div>
             <div>
               <Label className="mb-4 block">Make</Label>
-              <Input value={form.make} onChange={(e) => setForm({ ...form, make: e.target.value })} />
+              <Input
+                value={form.make}
+                className="bg-gray-100"
+                onChange={(e) => setForm({ ...form, make: e.target.value })}
+              />
             </div>
             <div>
               <Label className="mb-4 block">Year</Label>
-              <Input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
+              <Input
+                type="number"
+                value={form.year}
+                className="bg-gray-100"
+                onChange={(e) => setForm({ ...form, year: e.target.value })}
+              />
             </div>
             <div>
               <Label className="mb-4 block">Color</Label>
-              <Input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
+              <Input
+                value={form.color}
+                className="bg-gray-100"
+                onChange={(e) => setForm({ ...form, color: e.target.value })}
+              />
             </div>
           </div>
+
+          <div>
+            <Label className="mb-4 block">Category</Label>
+            <Select
+              value={form.vehicleCategoryId}
+              onValueChange={(v) =>
+                setForm({ ...form, vehicleCategoryId: v })
+              }
+            >
+              <SelectTrigger className="bg-gray-100">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button variant="secondary" onClick={() => setEditing(null)}>
+              Cancel
+            </Button>
             <Button onClick={handleSaveEdit}>Save</Button>
           </DialogFooter>
         </DialogContent>
@@ -247,11 +398,19 @@ const GetAllVehicles: React.FC<Props> = ({ open, onClose }) => {
             <DialogTitle>Confirm Deletion</DialogTitle>
           </DialogHeader>
           <p>
-            Do you really want to delete vehicle <span className="font-semibold">{deleteTarget?.vehicleNumber}</span>?
+            Do you really want to delete vehicle{" "}
+            <span className="font-semibold">
+              {deleteTarget?.vehicleNumber}
+            </span>
+            ?
           </p>
           <DialogFooter className="flex gap-2">
-            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>No</Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>Yes, Delete</Button>
+            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+              No
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Yes, Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
