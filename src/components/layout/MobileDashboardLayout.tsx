@@ -40,7 +40,9 @@ import {
   Truck,
   QrCode,
   PlugZap,
-  Map
+  Map,
+  Car,
+  ClipboardCheck
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
@@ -53,6 +55,7 @@ import NearbyChargers from '@/components/dashboard/forRider/chargers';
 import QRScannerPage from '@/components/dashboard/forRider/QRScannerPage';
 import Chargers from '@/components/dashboard/forSuperadmin/allChargers';
 import RidersMap from '@/components/dashboard/forAdmin/user-section/RidersMap';
+import AddVehicleCategory from '@/components/dashboard/forSuperadmin/addVehicleCategory';
 
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
@@ -83,7 +86,8 @@ type ActiveView =
   | 'nearby chargers'
   | 'qr-scanner'
   | 'chargers'
-  | 'riders-map';
+  | 'riders-map'
+  | 'vehicles';
 
 interface NavigationItem {
   id: string;
@@ -158,9 +162,10 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
           { id: 'organizations', label: 'Organizations', icon: Building2, url: '#', view: 'organizations', scrollTo: 'organizations-section' },
           { id: 'plans', label: 'Subscription Plans', icon: Shield, url: '/plans', view: 'plans' },
           { id: 'users', label: 'All Users', icon: Users, url: '#', view: 'users', scrollTo: 'users-section' },
-          { id: 'jobs', label: 'All Jobs', icon: Truck, url: '/jobs', view: 'jobs' },
+          { id: 'jobs', label: 'All Jobs', icon: ClipboardCheck, url: '/jobs', view: 'jobs' },
           { id: 'chargers', label: 'Chargers', icon: PlugZap, url: '/chargers', view: 'chargers' },
-          { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' }
+          { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' },
+          { id: 'vehicles', label: 'Vehicles', icon: Car, url: '/vehicles', view: 'vehicles' }
         ];
       
       case 'admin':
@@ -346,6 +351,8 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
         return <Chargers />;
       case 'riders-map':
         return <RidersMap />;
+      case 'vehicles':
+        return <AddVehicleCategory />;
       case 'dashboard':
       default:
         return (
