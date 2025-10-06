@@ -290,8 +290,8 @@ const SubscriptionPlans: React.FC = () => {
               <CardContent>
                 <p>{plan.description}</p>
                 <p className="text-lg font-bold mt-2">₹{plan.price}/mo</p>
-                <p>Max Vehicles: {plan.maxVehicles}</p>
-                <p>Max Users: {plan.maxUsers}</p>
+                {plan.maxVehicles > 0 && <p>Max Vehicles: {plan.maxVehicles}</p>}
+                {plan.maxUsers > 0 && <p>Max Users: {plan.maxUsers}</p>}
                 <p>Billing: {plan.durationDays} days</p>
 
                 <div className="flex items-center gap-2 mt-3">

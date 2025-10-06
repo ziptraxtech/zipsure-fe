@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Plus, Trash2} from "lucide-react";
@@ -71,9 +71,11 @@ const AddUserSuperAdmin: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const { toast } = useToast();
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const usersPerPage = 10;
-  const totalPages = Math.ceil(users.length / usersPerPage);
+  // server-side pagination
+  const [page, setPage] = useState<number>(1);
+  const [limit] = useState<number>(10);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalCount, setTotalCount] = useState<number>(0);
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -243,12 +245,11 @@ const AddUserSuperAdmin: React.FC = () => {
 
       setIsAddUserOpen(false);
       resetForm();
-      const newTotalPages = Math.ceil((users.length + 1) / usersPerPage);
-      setCurrentPage(newTotalPages);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating user:", error);
-      const status = error.response?.status;
+      const axiosErr = error as AxiosError<{ message?: string; details?: Array<{ field?: string; message?: string }> }>;
+      const status = axiosErr.response?.status;
 
       if (status === 500) {
         toast({
@@ -258,17 +259,14 @@ const AddUserSuperAdmin: React.FC = () => {
           duration: 5000,
         });
       } else if (status === 400) {
-        const errorData = error.response.data;
+        const errorData = axiosErr.response?.data;
         let errorMessage = "Invalid input";
 
         if (errorData.details && Array.isArray(errorData.details)) {
           errorMessage = errorData.details
-            .map(
-              (d: any) =>
-                `${d.field || "Field"}: ${d.message || "Invalid value"}`
-            )
+            .map((d: { field?: string; message?: string }) => `${d.field || 'Field'}: ${d.message || 'Invalid value'}`)
             .join("\n");
-        } else if (errorData.message) {
+        } else if (errorData?.message) {
           errorMessage = errorData.message;
         } else if (typeof errorData === "string") {
           errorMessage = errorData;
@@ -313,11 +311,27 @@ const AddUserSuperAdmin: React.FC = () => {
 
       const res = await axios.get(`${API_URL}/api/v1/users`, {
         headers: { Authorization: `Bearer ${token}` },
+        params: { page, limit },
       });
 
-      if (Array.isArray(res.data.data) && mountedRef.current) {
-        setUsers(res.data.data);
-        setLastRefreshed(new Date());
+      if (mountedRef.current) {
+        const data = res.data;
+        const list = Array.isArray(data?.data)
+          ? data.data
+          : Array.isArray(data?.users)
+            ? data.users
+            : [];
+        if (Array.isArray(list)) {
+          setUsers(list);
+          setLastRefreshed(new Date());
+        }
+        if (data?.pagination) {
+          setTotalPages(data.pagination.pages || 1);
+          setTotalCount(data.pagination.total || list.length || 0);
+        } else {
+          setTotalPages(1);
+          setTotalCount(list.length || 0);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch users", err);
@@ -426,7 +440,7 @@ const AddUserSuperAdmin: React.FC = () => {
       });
 
       setDeleteUser(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
       toast({
         title: "Error",
@@ -458,6 +472,11 @@ const AddUserSuperAdmin: React.FC = () => {
     };
   }, []);
 
+  // refetch when page changes
+  useEffect(() => {
+    fetchUsers();
+  }, [page]);
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -474,9 +493,7 @@ const AddUserSuperAdmin: React.FC = () => {
     };
   }, []);
 
-  const startIndex = (currentPage - 1) * usersPerPage;
-  const endIndex = startIndex + usersPerPage;
-  const currentUsers = users.slice(startIndex, endIndex);
+  const startIndex = (page - 1) * limit;
 
   return (
     <div className="space-y-6">
@@ -518,8 +535,8 @@ const AddUserSuperAdmin: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentUsers.length > 0 ? (
-                currentUsers.map((user, index) => (
+              {users.length > 0 ? (
+                users.map((user, index) => (
                   <TableRow key={user.id} className="hover:bg-muted/40">
                     <TableCell className="hidden md:table-cell whitespace-normal break-words">
                       {startIndex + index + 1}
@@ -581,28 +598,12 @@ const AddUserSuperAdmin: React.FC = () => {
             </TableBody>
           </Table>
 
-          {/* Pagination */}
+          {/* Footer Pagination (optional) */}
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-4">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => prev - 1)}
-              >
-                Previous
-              </Button>
-              <span className="px-2 py-1 text-sm font-medium">
-                {currentPage} / {totalPages}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((prev) => prev + 1)}
-              >
-                Next
-              </Button>
+              <Button size="sm" color="primary" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</Button>
+              <span className="px-2 py-1 text-sm font-medium">{page} / {totalPages}</span>
+              <Button size="sm" color="primary" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</Button>
             </div>
           )}
         </CardContent>

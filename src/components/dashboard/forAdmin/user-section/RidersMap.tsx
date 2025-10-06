@@ -8,8 +8,7 @@ import { Users, Phone, Mail, MapPin, RefreshCw } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-const defaultIcon = L.Icon.Default.prototype as any;
-delete defaultIcon._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
 
 const RiderLocation = new L.DivIcon({
   html: `
@@ -92,9 +91,32 @@ interface Charger {
   power: string;
 }
 
+type ApiUser = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  role: string;
+  latitude: number | null;
+  longitude: number | null;
+  isActive: boolean;
+};
+
+type RidersApiResponse = {
+  success: boolean;
+  data: ApiUser[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+};
+
 const MapController = ({ riders, selectedRiderId }: { riders: Rider[]; selectedRiderId: string | null }) => {
   const map = useMap();
-  
+
   useEffect(() => {
     if (riders.length > 0) {
       const bounds = L.latLngBounds(riders.map(rider => [rider.latitude, rider.longitude]));
@@ -126,6 +148,11 @@ const RidersMap = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [page, setPage] = useState<number>(1);
+  const [limit] = useState<number>(10);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalCount, setTotalCount] = useState<number>(0);
 
   const [chargers] = useState<Charger[]>([
     {
@@ -166,20 +193,26 @@ const RidersMap = () => {
     }
   ]);
 
-  const fetchRiders = useCallback(async (isAutoRefresh = false) => {
+  const fetchRiders = useCallback(async (isAutoRefresh = false, pageParam?: number) => {
     try {
       if (isAutoRefresh) {
         setRefreshing(true);
       } else {
         setLoading(true);
       }
-      
+
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch(`${API_URL}/api/v1/users`, {
+      const currentPage = pageParam ?? page;
+      const url = new URL(`${API_URL}/api/v1/users`);
+      url.searchParams.set('role', 'rider');
+      url.searchParams.set('page', String(currentPage));
+      url.searchParams.set('limit', String(limit));
+
+      const response = await fetch(url.toString(), {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
@@ -187,7 +220,7 @@ const RidersMap = () => {
         },
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('token');
@@ -197,40 +230,56 @@ const RidersMap = () => {
         console.error('Error response:', errorText);
         throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
-      
-      const data = await response.json();
-      
+
+      const data: RidersApiResponse = await response.json();
+
       if (data.success && data.data) {
-        const ridersWithLocation = data.data.filter((user: any) => 
-          user.role === 'rider' && 
-          user.latitude && 
-          user.longitude &&
-          !isNaN(parseFloat(user.latitude)) &&
-          !isNaN(parseFloat(user.longitude))
-        ).map((rider: any) => ({
-          ...rider,
-          latitude: parseFloat(rider.latitude),
-          longitude: parseFloat(rider.longitude)
-        }));
-        
+        const ridersWithLocation: Rider[] = data.data
+          .filter((user) =>
+            user.role === 'rider' &&
+            user.latitude !== null &&
+            user.longitude !== null
+          )
+          .map((user) => ({
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            isActive: user.isActive,
+            latitude: Number(user.latitude),
+            longitude: Number(user.longitude),
+          }));
+
         setRiders(ridersWithLocation);
         setLastUpdated(new Date());
         setError(null);
+
+        if (data.pagination) {
+          setTotalPages(data.pagination.pages);
+          setTotalCount(data.pagination.total);
+          setPage(data.pagination.page);
+        } else {
+          setTotalPages(1);
+          setTotalCount(data.data.length);
+        }
       } else {
         throw new Error('Invalid data format received from server');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in fetchRiders:', err);
-      setError(`Failed to load rider locations: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`Failed to load rider locations: ${message}`);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [page, limit]);
 
   useEffect(() => {
-    fetchRiders(false);
-  }, [fetchRiders]);
+    fetchRiders(false, page);
+  }, [fetchRiders, page]);
   useEffect(() => {
     if (refreshIntervalRef.current) {
       clearInterval(refreshIntervalRef.current);
@@ -254,7 +303,15 @@ const RidersMap = () => {
   };
 
   const handleManualRefresh = () => {
-    fetchRiders(true);
+    fetchRiders(true, page);
+  };
+
+  const gotoPrevPage = () => {
+    if (page > 1) setPage(page - 1);
+  };
+
+  const gotoNextPage = () => {
+    if (page < totalPages) setPage(page + 1);
   };
 
   const getStatusColor = (status: string) => {
@@ -288,7 +345,7 @@ const RidersMap = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center space-y-4">
           <p style={{ color: 'red' }}>{error}</p>
-          <button 
+          <button
             onClick={() => fetchRiders(false)}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
           >
@@ -307,43 +364,54 @@ const RidersMap = () => {
     );
   }
 
-  const defaultCenter: [number, number] = riders.length > 0 
-    ? [riders[0].latitude, riders[0].longitude] 
-    : [28.6139, 77.2090]; 
+  const defaultCenter: [number, number] = riders.length > 0
+    ? [riders[0].latitude, riders[0].longitude]
+    : [28.6139, 77.2090];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
-      <div className="p-4 space-y-6">
+    <div className="h-screen overflow-y-auto bg-gradient-to-br from-gray-50 to-orange-50 pb-[100px]">
+      <div className="p-4 space-y-6 min-h-full">
         {/* Page Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-          <h1 className="text-2xl lg:text-3xl font-bold">Riders Map</h1> 
+          <h1 className="text-2xl lg:text-3xl font-bold">Riders Map</h1>
         </div>
-        
+
         {/* Map Section */}
         <div className="w-full">
-          <div className="h-96 rounded-lg overflow-hidden shadow-md ">
-            <MapContainer 
-              center={defaultCenter} 
-              zoom={10} 
-              style={{ height: '100%', width: '100%', zIndex: 0, position: 'relative' }}
+          <div className="h-96 rounded-lg overflow-hidden shadow-md">
+            <MapContainer
+              center={defaultCenter}
+              zoom={10}
+              scrollWheelZoom={false}
+              style={{
+                height: '100%',
+                width: '100%',
+                zIndex: 0,
+                position: 'relative',
+                touchAction: 'pan-y',
+              }}
               className="leaflet-container"
               ref={mapRef}
             >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+              <MapController
+                riders={riders}
+                selectedRiderId={selectedRiderId}
               />
-              
-              <MapController riders={riders} selectedRiderId={selectedRiderId} />
-              
-              {/* Rider markers */}
+
               {riders.map((rider) => (
-                <Marker 
-                  key={rider.id} 
+                <Marker
+                  key={rider.id}
                   position={[rider.latitude, rider.longitude]}
-                  icon={selectedRiderId === rider.id ? SelectedRiderLocation : RiderLocation}
+                  icon={
+                    selectedRiderId === rider.id
+                      ? SelectedRiderLocation
+                      : RiderLocation
+                  }
                   zIndexOffset={selectedRiderId === rider.id ? 1000 : 0}
                   eventHandlers={{
-                    click: () => handleRiderClick(rider)
+                    click: () => handleRiderClick(rider),
                   }}
                 >
                   <Popup>
@@ -372,13 +440,12 @@ const RidersMap = () => {
                       <div className="pt-2">
                         <Badge
                           variant="outline"
-                          className={`${
-                            rider.isActive 
-                              ? "text-green-500 border-green-500" 
-                              : "text-red-500 border-red-500"
-                          }`}
+                          className={`${rider.isActive
+                              ? 'text-green-500 border-green-500'
+                              : 'text-red-500 border-red-500'
+                            }`}
                         >
-                          {rider.isActive ? "Active" : "Inactive"}
+                          {rider.isActive ? 'Active' : 'Inactive'}
                         </Badge>
                       </div>
                     </div>
@@ -392,25 +459,55 @@ const RidersMap = () => {
         {/* Riders Section */}
         <div className="w-full">
           <Card className="shadow-md border rounded-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Users className="h-5 w-5" /> 
-                Riders ({riders.length})
-                {refreshing && (
-                  <RefreshCw className="h-4 w-4 animate-spin text-blue-500 ml-2" />
-                )}
-              </CardTitle>
+            <CardHeader className="pb-3 sticky top-0 bg-white z-10">
+              <div className="flex items-center justify-between w-full">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5" /> Riders
+                  {refreshing && (
+                    <RefreshCw className="h-4 w-4 animate-spin text-blue-500 ml-2" />
+                  )}
+                </CardTitle>
+
+                {/* Pagination */}
+                <div className="flex items-center gap-3 text-sm">
+                  <button
+                    onClick={gotoPrevPage}
+                    disabled={page === 1}
+                    className={`px-2 py-1.5 rounded border ${page === 1
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'bg-primary text-white'
+                      }`}
+                    aria-label="Previous page"
+                  >
+                    Prev
+                  </button>
+                  <span className="min-w-[40px] text-center">
+                    {page} / {totalPages}
+                  </span>
+                  <button
+                    onClick={gotoNextPage}
+                    disabled={page === totalPages}
+                    className={`px-2 py-1.5 rounded border ${page === totalPages
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'bg-primary text-white'
+                      }`}
+                    aria-label="Next page"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </CardHeader>
+
             <CardContent className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {riders.map((rider) => (
-                  <div 
+                  <div
                     key={rider.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                      selectedRiderId === rider.id 
-                        ? 'bg-blue-50 border-blue-300 shadow-md' 
+                    className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${selectedRiderId === rider.id
+                        ? 'bg-blue-50 border-blue-300 shadow-md'
                         : 'bg-white hover:bg-gray-50'
-                    }`}
+                      }`}
                     onClick={() => handleRiderSelect(rider.id)}
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -419,15 +516,15 @@ const RidersMap = () => {
                       </h4>
                       <Badge
                         variant="outline"
-                        className={`${
-                          rider.isActive 
-                            ? "text-green-500 border-green-500" 
-                            : "text-red-500 border-red-500"
-                        }`}
+                        className={`${rider.isActive
+                            ? 'text-green-500 border-green-500'
+                            : 'text-red-500 border-red-500'
+                          }`}
                       >
-                        {rider.isActive ? "Active" : "Inactive"}
+                        {rider.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
+
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs text-gray-600">
                         <Mail className="h-3 w-3" />
@@ -448,6 +545,7 @@ const RidersMap = () => {
         </div>
       </div>
     </div>
+
   );
 };
 
