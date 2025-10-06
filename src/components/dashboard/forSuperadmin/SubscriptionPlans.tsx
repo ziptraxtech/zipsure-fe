@@ -144,10 +144,24 @@ const SubscriptionPlans: React.FC = () => {
     fetchPayments();
   }, []);
 
+  const determinePlanType = (maxVehicles: number, maxUsers: number): string => {
+    if (maxVehicles === 0 && maxUsers > 0) {
+      return "user";
+    } else if (maxUsers === 0 && maxVehicles > 0) {
+      return "vehicle";
+    } else {
+      return "combo";
+    }
+  };
+
   const handleSavePlan = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const formData = new FormData(e.currentTarget);
+    const maxVehicles = Number(formData.get("maxVehicles"));
+    const maxUsers = Number(formData.get("maxUsers"));
+    const planType = determinePlanType(maxVehicles, maxUsers);
+
     const payload = {
       name: formData.get("name"),
       description: formData.get("description"),
@@ -156,6 +170,7 @@ const SubscriptionPlans: React.FC = () => {
       maxUsers: Number(formData.get("maxUsers")),
       durationDays: Number(formData.get("durationDays")),
       isActive: true,
+      planType: planType,
     };
 
     try {
