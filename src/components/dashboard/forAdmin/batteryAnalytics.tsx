@@ -4,7 +4,7 @@ const BatteryAnalytics = () => {
         {/* Gradient overlay */}
         <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl lg:text-3xl font-bold">Battery Analytics</h1>
-          
+          </div>
   
           {/* Iframe */}
           <div className="w-full h-[80vh]"> 
@@ -15,7 +15,6 @@ const BatteryAnalytics = () => {
             />
           </div>
         </div>
-      </div>
     );
   };
   

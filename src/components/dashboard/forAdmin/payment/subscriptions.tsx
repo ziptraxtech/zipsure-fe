@@ -192,14 +192,18 @@ const Subscriptions = () => {
               <CardContent>
                 <p className="text-muted-foreground mb-4">{plan.description}</p>
                 <div className="space-y-2 text-sm">
+                  {plan.maxVehicles > 0 && (
                   <div className="flex justify-between">
                     <span>Max Vehicles:</span>
                     <span className="font-medium">{plan.maxVehicles}</span>
                   </div>
+                  )}
+                  {plan.maxUsers > 0 && (
                   <div className="flex justify-between">
                     <span>Max Users:</span>
                     <span className="font-medium">{plan.maxUsers}</span>
                   </div>
+                  )}
                   <div className="flex justify-between">
                     <span>Billing Cycle:</span>
                     <span className="font-medium">
