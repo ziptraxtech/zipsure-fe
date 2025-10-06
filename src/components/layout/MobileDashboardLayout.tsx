@@ -37,7 +37,7 @@ import {
   MapPin,
   ClipboardList,
   Home,
-  Truck,
+  Battery,
   QrCode,
   PlugZap,
   Map,
@@ -56,6 +56,7 @@ import QRScannerPage from '@/components/dashboard/forRider/QRScannerPage';
 import Chargers from '@/components/dashboard/forSuperadmin/allChargers';
 import RidersMap from '@/components/dashboard/forAdmin/user-section/RidersMap';
 import AddVehicleCategory from '@/components/dashboard/forSuperadmin/addVehicleCategory';
+import BatteryAnalytics from '@/components/dashboard/forAdmin/batteryAnalytics';
 
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
@@ -87,7 +88,8 @@ type ActiveView =
   | 'qr-scanner'
   | 'chargers'
   | 'riders-map'
-  | 'vehicles';
+  | 'vehicles'
+  | 'battery-analytics';
 
 interface NavigationItem {
   id: string;
@@ -173,7 +175,8 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
           ...baseItems,
           { id: 'subscriptions', label: 'Subscriptions', icon: DollarSign, url: '/subscriptions', view: 'subscriptions' },
           { id: 'users', label: 'Team Members', icon: Users, url: '#', view: 'users', scrollTo: 'admin-users-section' },
-          { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' }
+          { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' },
+          { id: 'battery-analytics', label: 'Battery Analytics', icon: Battery, url: '/battery-analytics', view: 'battery-analytics' }
         ];
       case 'allocator':
         return [
@@ -327,8 +330,9 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
           );
         }
       }
-    } catch {
-    }
+    } 
+catch {
+   }
     if (user?.name) return user.name.substring(0, 2).toUpperCase();
     return "U";
   };
@@ -353,6 +357,8 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
         return <RidersMap />;
       case 'vehicles':
         return <AddVehicleCategory />;
+      case 'battery-analytics':
+        return <BatteryAnalytics />;
       case 'dashboard':
       default:
         return (
