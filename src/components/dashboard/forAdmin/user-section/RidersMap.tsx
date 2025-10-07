@@ -75,8 +75,8 @@ interface Rider {
   lastName: string;
   email: string;
   phone: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   isActive: boolean;
   role: string;
 }
@@ -118,17 +118,18 @@ const MapController = ({ riders, selectedRiderId }: { riders: Rider[]; selectedR
   const map = useMap();
 
   useEffect(() => {
-    if (riders.length > 0) {
-      const bounds = L.latLngBounds(riders.map(rider => [rider.latitude, rider.longitude]));
+    const ridersWithCoords = riders.filter(r => r.latitude !== null && r.longitude !== null);
+    if (ridersWithCoords.length > 0) {
+      const bounds = L.latLngBounds(ridersWithCoords.map(r => [r.latitude!, r.longitude!]));
       map.fitBounds(bounds, { padding: [20, 20] });
     }
   }, [riders, map]);
 
   useEffect(() => {
     if (selectedRiderId) {
-      const selectedRider = riders.find(rider => rider.id === selectedRiderId);
+      const selectedRider = riders.find(r => r.id === selectedRiderId && r.latitude !== null && r.longitude !== null);
       if (selectedRider) {
-        map.setView([selectedRider.latitude, selectedRider.longitude], 15, {
+        map.setView([selectedRider.latitude!, selectedRider.longitude!], 15, {
           animate: true,
           duration: 1
         });
@@ -234,25 +235,19 @@ const RidersMap = () => {
       const data: RidersApiResponse = await response.json();
 
       if (data.success && data.data) {
-        const ridersWithLocation: Rider[] = data.data
-          .filter((user) =>
-            user.role === 'rider' &&
-            user.latitude !== null &&
-            user.longitude !== null
-          )
-          .map((user) => ({
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            phone: user.phone,
-            role: user.role,
-            isActive: user.isActive,
-            latitude: Number(user.latitude),
-            longitude: Number(user.longitude),
-          }));
+        const allRiders: Rider[] = data.data.map((user) => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          isActive: user.isActive,
+          latitude: user.latitude,
+          longitude: user.longitude,
+        }));
 
-        setRiders(ridersWithLocation);
+        setRiders(allRiders);
         setLastUpdated(new Date());
         setError(null);
 
@@ -280,6 +275,7 @@ const RidersMap = () => {
   useEffect(() => {
     fetchRiders(false, page);
   }, [fetchRiders, page]);
+
   useEffect(() => {
     if (refreshIntervalRef.current) {
       clearInterval(refreshIntervalRef.current);
@@ -295,15 +291,14 @@ const RidersMap = () => {
   }, [fetchRiders]);
 
   const handleRiderClick = (rider: Rider) => {
+    if (rider.latitude === null || rider.longitude === null) return;
     setSelectedRiderId(rider.id);
   };
 
   const handleRiderSelect = (riderId: string) => {
+    const rider = riders.find(r => r.id === riderId);
+    if (!rider || rider.latitude === null || rider.longitude === null) return;
     setSelectedRiderId(riderId);
-  };
-
-  const handleManualRefresh = () => {
-    fetchRiders(true, page);
   };
 
   const gotoPrevPage = () => {
@@ -312,24 +307,6 @@ const RidersMap = () => {
 
   const gotoNextPage = () => {
     if (page < totalPages) setPage(page + 1);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available':
-        return 'text-green-500 border-green-500 bg-green-50';
-      case 'occupied':
-        return 'text-red-500 border-red-500 bg-red-50';
-      case 'maintenance':
-        return 'text-yellow-500 border-yellow-500 bg-yellow-50';
-      default:
-        return 'text-gray-500 border-gray-500 bg-gray-50';
-    }
-  };
-
-  const formatLastUpdated = (date: Date | null) => {
-    if (!date) return 'Never';
-    return date.toLocaleTimeString();
   };
 
   if (loading && !refreshing) {
@@ -359,13 +336,14 @@ const RidersMap = () => {
   if (riders.length === 0 && !loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p>No riders with location data found.</p>
+        <p>No riders found.</p>
       </div>
     );
   }
 
-  const defaultCenter: [number, number] = riders.length > 0
-    ? [riders[0].latitude, riders[0].longitude]
+  const ridersWithLocation = riders.filter(r => r.latitude !== null && r.longitude !== null);
+  const defaultCenter: [number, number] = ridersWithLocation.length > 0
+    ? [ridersWithLocation[0].latitude!, ridersWithLocation[0].longitude!]
     : [28.6139, 77.2090];
 
   return (
@@ -400,10 +378,10 @@ const RidersMap = () => {
                 selectedRiderId={selectedRiderId}
               />
 
-              {riders.map((rider) => (
+              {ridersWithLocation.map((rider) => (
                 <Marker
                   key={rider.id}
-                  position={[rider.latitude, rider.longitude]}
+                  position={[rider.latitude!, rider.longitude!]}
                   icon={
                     selectedRiderId === rider.id
                       ? SelectedRiderLocation
@@ -433,7 +411,7 @@ const RidersMap = () => {
                         <div className="flex items-center gap-2 text-sm">
                           <MapPin className="h-3 w-3 text-gray-500" />
                           <span className="text-gray-700">
-                            {rider.latitude.toFixed(4)}, {rider.longitude.toFixed(4)}
+                            {rider.latitude!.toFixed(4)}, {rider.longitude!.toFixed(4)}
                           </span>
                         </div>
                       </div>
@@ -536,6 +514,11 @@ const RidersMap = () => {
                           <span>{rider.phone}</span>
                         </div>
                       )}
+                      {rider.latitude === null || rider.longitude === null ? (
+                        <div className="text-xs text-red-400 italic">
+                          No location available
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ))}
