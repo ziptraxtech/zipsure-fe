@@ -337,7 +337,7 @@ const AllocatorDashboard: React.FC = () => {
         },
         {
           title: "Unassigned Jobs",
-          value: `${analytics.jobStatuses["yet to be assigned"]}`,
+          value: `${analytics.jobStatuses["yet to be assigned"] > 0 ?analytics.jobStatuses["yet to be assigned"] : "0"}`,
           subtitle: "Yet to be assigned",
           icon: ClipboardPenLine ,
           variant: "default" as const,

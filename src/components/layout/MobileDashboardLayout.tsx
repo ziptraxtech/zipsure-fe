@@ -181,7 +181,7 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
       case 'allocator':
         return [
           ...baseItems,
-          { id: 'jobs', label: 'Job Allocation', icon: ClipboardList, url: '#', view: 'jobs', scrollTo: 'allocator-jobs-section' },
+          { id: 'jobs', label: 'Job Allocation', icon: ClipboardList, url: '#', view: 'users', scrollTo: 'allocator-jobs-section' },
           { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' }
         ];
       
