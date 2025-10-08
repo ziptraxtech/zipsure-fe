@@ -212,7 +212,8 @@ const RidersMap = () => {
       url.searchParams.set('role', 'rider');
       url.searchParams.set('page', String(currentPage));
       url.searchParams.set('limit', String(limit));
-
+      console.log("Api url => ",API_URL,"current url => ",url,"complete url=>",url)
+      
       const response = await fetch(url.toString(), {
         headers: {
           'Accept': 'application/json',
@@ -221,7 +222,7 @@ const RidersMap = () => {
         },
         credentials: 'include'
       });
-
+      console.log("Response => ",response)
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('token');
