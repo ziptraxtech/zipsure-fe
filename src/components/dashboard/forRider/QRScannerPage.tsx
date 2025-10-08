@@ -75,11 +75,16 @@ const QRScannerPage = () => {
   }, [facingMode]);
 
   const toggleCamera = useCallback(async () => {
-    if (!isCameraOpen || availableCameras.length < 2) return;
-    
+    if (!isCameraOpen) return;
+
     const newFacingMode = facingMode === 'environment' ? 'user' : 'environment';
-    await startCamera(newFacingMode);
-  }, [isCameraOpen, facingMode, availableCameras.length, startCamera]);
+    try {
+        await startCamera(newFacingMode);
+    } catch (err) {
+        console.error('Failed to switch camera:', err);
+    }
+}, [isCameraOpen, facingMode, startCamera]);
+
 
   const stopCamera = useCallback(() => {
     if (videoRef.current && videoRef.current._eventListeners) {
