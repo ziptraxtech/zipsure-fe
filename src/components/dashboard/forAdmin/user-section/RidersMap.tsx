@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, Phone, Mail, MapPin, RefreshCw } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL  || "https://app.zipsureai.com/api";
 
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
 
@@ -208,6 +208,7 @@ const RidersMap = () => {
       }
 
       const currentPage = pageParam ?? page;
+
       const url = new URL(`${API_URL}/api/v1/users`);
       url.searchParams.set('role', 'rider');
       url.searchParams.set('page', String(currentPage));
@@ -272,6 +273,8 @@ const RidersMap = () => {
       setRefreshing(false);
     }
   }, [page, limit]);
+
+  console.log("API_URL=>",API_URL)
 
   useEffect(() => {
     fetchRiders(false, page);
