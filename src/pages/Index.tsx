@@ -1,5 +1,5 @@
 // src/pages/Index.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginForm from '@/components/auth/LoginForm';
 import MobileDashboardLayout from '@/components/layout/MobileDashboardLayout';
@@ -11,6 +11,34 @@ import { Loader2 } from 'lucide-react';
 
 const Index = () => {
   const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    const userAgent = navigator.userAgent;
+    const isZipsureApp = userAgent.includes("ZipsureApp/");
+
+    if (isZipsureApp) {
+      const versionMatch = userAgent.match(/ZipsureApp\/(\d+)/);
+      const appVersion = versionMatch ? parseInt(versionMatch[1]) : 0;
+      const REQUIRED_VERSION = 2;
+
+      if (appVersion < REQUIRED_VERSION || !appVersion) {
+        document.body.innerHTML = `
+          <div style="text-align:center;margin-top:50px;font-family:sans-serif">
+          <br>
+            <h2>🚨 Update Required</h2>
+            <br>
+            <p>Your app version is outdated. Please download the latest version.</p>
+            <br>
+            <br>
+            <a href="https://yourwebsite.com/download-latest.apk"
+               style="background:#007bff;color:#fff;padding:10px 20px;border-radius:5px;text-decoration:none;">
+               Download Latest
+            </a>
+          </div>
+        `;
+      }
+    }
+  }, []);
 
   if (isLoading) {
     return (
