@@ -9,7 +9,7 @@ const BatteryAnalytics = () => {
           {/* Iframe */}
           <div className="w-full h-[80vh]"> 
             <iframe
-              src="http://www.zipsureai.com/dash"
+              src="https://zipsureai-minidashboard.vercel.app"
               title="Battery Analytics Iframe"
               className="w-full h-full border-0 rounded-lg shadow"
             />
