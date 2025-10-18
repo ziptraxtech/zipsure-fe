@@ -42,7 +42,8 @@ import {
   PlugZap,
   Map,
   Car,
-  ClipboardCheck
+  ClipboardCheck,
+  UserPen
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
@@ -296,8 +297,8 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onOpenChangePassword}>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
+              <UserPen className="mr-2 h-4 w-4" />
+              Change Password
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout} className="text-destructive">
