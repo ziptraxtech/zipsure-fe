@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -16,6 +17,8 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ open, onOpenChange }) =
   const { toast } = useToast();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ oldPassword?: string; newPassword?: string }>({});
 
@@ -104,13 +107,24 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ open, onOpenChange }) =
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="old-password">Current Password</Label>
-            <Input
-              id="old-password"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Enter your current password"
-            />
+            <div className="relative">
+              <Input
+                id="old-password"
+                type={showCurrentPassword ? "text" : "password"}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter your current password"
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+              >
+                {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
             {errors.oldPassword && (
               <p className="text-xs text-destructive">{errors.oldPassword}</p>
             )}
@@ -118,13 +132,24 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ open, onOpenChange }) =
 
           <div className="space-y-2">
             <Label htmlFor="new-password">New Password</Label>
-            <Input
-              id="new-password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter your new password"
-            />
+            <div className="relative">
+              <Input
+                id="new-password"
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter your new password"
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+              >
+                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
             {errors.newPassword && (
               <p className="text-xs text-destructive">{errors.newPassword}</p>
             )}
