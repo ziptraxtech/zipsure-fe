@@ -8,12 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Shield, Eye, EyeOff } from 'lucide-react';
 import zip from '@/assets/zip.png';
+import ForgotPassword from '../../contexts/ForgotPassword';
 
 const LoginForm = () => {
   const { login, isLoading } = useAuth();
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,6 +82,17 @@ const LoginForm = () => {
                 </div>
               </div>
 
+              <div className="space-y-1 text-right" style={{ marginTop: '0rem'}}>
+                <Button 
+                  type="button"
+                  variant="link" 
+                  className="text-gray-500 hover:text-primary/80" 
+                  onClick={() => setForgotPasswordOpen(true)}
+                >
+                  Forgot Password ?
+                </Button>
+              </div>
+
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -89,6 +102,7 @@ const LoginForm = () => {
               <Button 
                 type="submit" 
                 className="w-full fleet-gradient" 
+                style={{ marginTop: '0rem'}}
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -107,6 +121,12 @@ const LoginForm = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPassword 
+        open={forgotPasswordOpen} 
+        onOpenChange={setForgotPasswordOpen}
+      />
     </div>
   );
 };
