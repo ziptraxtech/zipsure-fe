@@ -30,7 +30,7 @@ interface Organization {
   status: string;
   phone: string;
   email: string;
-  gst: string;
+  gstNumber: string;
   address: string;
 }
 
@@ -154,7 +154,7 @@ const GlobalDashboard: React.FC = () => {
           status: org.isActive ? 'active' : 'inactive',
           phone: org.phone,
           email: org.email,
-          gst: org.gstNumber,
+          gstNumber: org.gstNumber,
           address: [org.address, org.city, org.state, org.country]
             .filter(Boolean)
             .join(', '),
@@ -171,30 +171,39 @@ const GlobalDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div id="dashboard-top" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold">Global Dashboard</h1>
-          <p className="text-muted-foreground">System-wide overview and analytics</p>
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+      {/* Gradient overlay */}
+      <div 
+        className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_100%_0%,rgba(206, 122, 122, 0.15)_0%,rgba(255,255,255,0)_70%] pointer-events-none"
+        aria-hidden="true"
+      />
+      
+      {/* Content */}
+      <div className="relative z-10 space-y-6 p-4">
+        {/* Header */}
+        <div id="dashboard-top" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold">Global Dashboard</h1>
+            <p className="text-muted-foreground">System-wide overview and analytics</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium">Super Administrator</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
-          <span className="text-sm font-medium">Super Administrator</span>
+
+        {/* Metrics Section */}
+        <MetricsSection overview={overview} />
+
+        {/* Organizations Section */}
+        <div id="organizations-section">
+          <OrganizationOverview organizations={organizations} isLoading={isLoading} />
         </div>
-      </div>
 
-      {/* Metrics Section */}
-      <MetricsSection overview={overview} />
-
-      {/* Organizations Section */}
-      <div id="organizations-section">
-        <OrganizationOverview organizations={organizations} isLoading={isLoading} />
-      </div>
-
-      {/* Users Section (Super Admin specific) */}
-      <div id="users-section">
-        <AddUserSuperAdmin /> {/* ✅ Replaced UsersTable with AddUserSuperAdmin */}
+        {/* Users Section (Super Admin specific) */}
+        <div id="users-section">
+          <AddUserSuperAdmin />
+        </div>
       </div>
     </div>
   );

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Eye, Plus } from "lucide-react";
+import { Users, Eye, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
+import { DownloadCSV } from "../../forSuperadmin/downloadcsv";
+import { EditModal } from "./editModal";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,15 @@ const UsersTable: React.FC<UsersTableProps> = ({
   onRefresh,
 }) => {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [localUsers, setLocalUsers] = useState<User[]>(users);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  
+  // Separate state for delete confirmation
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
   const [newUser, setNewUser] = useState({
     firstName: "",
     lastName: "",
@@ -56,9 +66,6 @@ const UsersTable: React.FC<UsersTableProps> = ({
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const { toast } = useToast();
-
-  const [localUsers, setLocalUsers] = useState<User[]>(users);
 
   useEffect(() => {
     setLocalUsers(users);
@@ -99,6 +106,14 @@ const UsersTable: React.FC<UsersTableProps> = ({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Clear any existing error for this field when user starts typing
+    if (errors[e.target.name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[e.target.name];
+        return newErrors;
+      });
+    }
     const { name, value } = e.target;
     setNewUser({ ...newUser, [name]: value });
     validateField(name, value);
@@ -106,9 +121,87 @@ const UsersTable: React.FC<UsersTableProps> = ({
 
   const handleRoleChange = (value: string) => {
     setNewUser({ ...newUser, role: value });
+    // Clear role error if any
+    if (errors.role) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.role;
+        return newErrors;
+      });
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+  };
+
+  // Simple delete handler - just opens confirmation dialog
+  const handleDeleteClick = (user: User) => {
+    setUserToDelete(user);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Actual delete function
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      setIsSubmitting(true);
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Not authenticated");
+
+      const API_URL = import.meta.env.VITE_API_URL;
+      await axios.delete(`${API_URL}/api/v1/users/${userToDelete.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      toast({
+        title: "Success",
+        description: "User deleted successfully!",
+        className: "bg-green-500 text-white",
+      });
+
+      // Update local state
+      setLocalUsers(localUsers.filter(user => user.id !== userToDelete.id));
+      
+      // Close dialog and reset state
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
+      
+      // Refresh if callback provided
+      if (onRefresh) onRefresh();
+      
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user. Please try again.",
+        className: "bg-red-500 text-white",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUserUpdated = (updatedUser: User) => {
+    setLocalUsers(localUsers.map(user => 
+      user.id === updatedUser.id ? updatedUser : user
+    ));
+    if (onRefresh) onRefresh();
+  };
+
+  const handleUserDeleted = (deletedUserId: string) => {
+    setLocalUsers(localUsers.filter(user => user.id !== deletedUserId));
+    if (onRefresh) onRefresh();
   };
 
   const handleSubmit = async () => {
+    await handleCreateUser();
+  };
+
+  const handleCreateUser = async () => {
     Object.entries(newUser).forEach(([key, value]) => validateField(key, value));
     const hasErrors = Object.values(errors).some((err) => err);
     if (hasErrors) {
@@ -135,56 +228,63 @@ const UsersTable: React.FC<UsersTableProps> = ({
 
       const API_URL = import.meta.env.VITE_API_URL;
 
-      const res = await axios.post(
-        `${API_URL}/api/v1/users`,
-        {
-          email: newUser.email,
-          password: newUser.password,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-          phone: newUser.phone,
-          role: newUser.role,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+      setIsSubmitting(true);
+      try {
+        const res = await axios.post(
+          `${API_URL}/api/v1/users`,
+          {
+            email: newUser.email,
+            password: newUser.password,
+            firstName: newUser.firstName,
+            lastName: newUser.lastName,
+            phone: newUser.phone,
+            role: newUser.role,
           },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const createdUser: User = res.data.data || {
+          ...newUser,
+          id: Date.now().toString(),
+          isActive: true,
+        };
+
+        setLocalUsers((prev) => [...prev, createdUser]);
+
+        toast({
+          title: "Success",
+          description: "User created successfully!",
+          className: "bg-green-500 text-white",
+        });
+
+        setIsAddUserOpen(false);
+        setNewUser({
+          firstName: "",
+          lastName: "",
+          email: "",
+          password: "",
+          phone: "",
+          role: "admin",
+        });
+        setErrors({});
+
+        if (onRefresh) {
+          onRefresh();
         }
-      );
-
-      const createdUser: User = res.data.data || {
-        ...newUser,
-        id: Date.now().toString(),
-        isActive: true,
-      };
-
-      setLocalUsers((prev) => [...prev, createdUser]);
-
-      toast({
-        title: "Success",
-        description: "User created successfully!",
-        className: "bg-green-500 text-white",
-      });
-
-      setIsAddUserOpen(false);
-      setNewUser({
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "",
-        phone: "",
-        role: "admin",
-      });
-      setErrors({});
-
-      if (onRefresh) {
-        onRefresh();
+        setCurrentPage(Math.ceil((localUsers.length + 1) / usersPerPage));
+      } finally {
+        setIsSubmitting(false);
       }
-      setCurrentPage(Math.ceil((localUsers.length + 1) / usersPerPage));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      const status = error.response?.status;
+      type ApiErrorData = { message?: string; details?: Array<{ field?: string; message?: string }> };
+      const axiosErr = error as AxiosError<ApiErrorData>;
+      const status = axiosErr.response?.status;
       if (status === 500) {
         toast({
           title: "Error",
@@ -192,14 +292,14 @@ const UsersTable: React.FC<UsersTableProps> = ({
           className: "bg-red-500 text-white",
           duration: 5000,
         });
-      } else if (error.response?.status === 400) {
-        const errorData = error.response.data;
+      } else if (status === 400) {
+        const errorData = axiosErr.response?.data;
         let errorMessage = "Invalid input";
-        if (errorData.details && Array.isArray(errorData.details)) {
+        if (errorData?.details && Array.isArray(errorData.details)) {
           errorMessage = errorData.details
-            .map((d: any) => `${d.field || 'Field'}: ${d.message || 'Invalid value'}`)
+            .map((d) => `${d.field || 'Field'}: ${d.message || 'Invalid value'}`)
             .join("\n");
-        } else if (errorData.message) {
+        } else if (errorData?.message) {
           errorMessage = errorData.message;
         } else if (typeof errorData === "string") {
           errorMessage = errorData;
@@ -225,6 +325,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
   const endIndex = startIndex + usersPerPage;
   const currentUsers = localUsers.slice(startIndex, endIndex);
 
+
   return (
     <>
       <Card className="shadow-md border rounded-lg">
@@ -234,8 +335,13 @@ const UsersTable: React.FC<UsersTableProps> = ({
               <Users className="h-5 w-5" /> Users
             </CardTitle>
             <div className="flex gap-2">
+              <DownloadCSV 
+                endpoint="users" 
+                onDownloadStart={() => {}}
+                onDownloadComplete={() => {}}
+              />
               <Button size="sm" onClick={() => setIsAddUserOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Add User
+                <Plus className="h-4 w-4 mr-1" /> Add
               </Button>
               {onRefresh && (
                 <Button
@@ -261,6 +367,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 <TableHead className="hidden md:table-cell">Phone</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Active</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -271,7 +378,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                     <TableCell>{(user.firstName || "—") + " " + (user.lastName || "—")}</TableCell>
                     <TableCell className="hidden md:table-cell">{user.email || "—"}</TableCell>
                     <TableCell className="hidden md:table-cell">{user.phone || "—"}</TableCell>
-                    <TableCell className="capitalize">{user.role || "—"}</TableCell>
+                    <TableCell className="capitalize">{user.role === "allocator" ? "Fleet Manager" : (user.role || "—")}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -281,6 +388,22 @@ const UsersTable: React.FC<UsersTableProps> = ({
                       >
                         {user.isActive ? "Active" : "Inactive"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditUser(user)}
+                        className="h-8 px-3 mr-2"
+                      >
+                        Edit
+                      </Button>        
+                      <Button color="primary" 
+                      size="default" 
+                      className="px-3 py-1.5" 
+                      onClick={() => handleDeleteClick(user)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -312,6 +435,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
         </CardContent>
       </Card>
 
+      {/* Add User Dialog */}
       <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
@@ -386,7 +510,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="rider">Rider</SelectItem>
-                  <SelectItem value="allocator">Allocator</SelectItem>
+                  <SelectItem value="allocator">Fleet Manager</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -410,6 +534,49 @@ const UsersTable: React.FC<UsersTableProps> = ({
               Clear
             </Button>
             <Button onClick={handleSubmit}>Add User</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Modal*/}
+      <EditModal
+        isOpen={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        user={editingUser}
+        onSuccess={() => {
+          if (onRefresh) onRefresh();
+        }}
+      />
+
+      {/*Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Are you sure you want to delete user <span className="font-semibold">{userToDelete ? `${userToDelete.firstName} ${userToDelete.lastName}` : ''}</span>?</p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setUserToDelete(null);
+              }}
+              disabled={isSubmitting}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmDelete}
+              disabled={isSubmitting}
+              type="button"
+            >
+              {isSubmitting ? "Deleting..." : "Delete"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

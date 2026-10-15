@@ -2,18 +2,23 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import AddOrganizationDialog from "./AddOrganization";
-import { Building2Icon } from "lucide-react";
+import { Building2Icon, Trash2 } from "lucide-react";
 import { CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
+import { DownloadCSV } from "./downloadcsv";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 export interface Organization {
+  id: string;
   name: string;
-  status: string;
+  status: string; 
   phone: string;
   email: string;
   gstNumber: string;
@@ -41,7 +46,7 @@ const getStatusBadge = (status: string) => {
 const AddressDialog: React.FC<{ org: Organization }> = ({ org }) => (
   <Dialog>
     <DialogTrigger asChild>
-      <Button variant="outline" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 text-xs">
+      <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 text-xs">
         View
       </Button>
     </DialogTrigger>
@@ -68,7 +73,13 @@ const AddressDialog: React.FC<{ org: Organization }> = ({ org }) => (
   </Dialog>
 );
 
-const OrganizationTable: React.FC<{ organizations: Organization[]; isLoading: boolean }> = ({ organizations, isLoading }) => {
+const OrganizationTable: React.FC<{
+  organizations: Organization[];
+  isLoading: boolean;
+  onEdit: (org: Organization) => void;
+  onAskDelete: (org: Organization) => void;
+  isDeleting?: boolean;
+}> = ({ organizations, isLoading, onEdit, onAskDelete, isDeleting }) => {
   if (organizations.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -87,6 +98,7 @@ const OrganizationTable: React.FC<{ organizations: Organization[]; isLoading: bo
           <TableHead className="hidden md:table-cell">Email</TableHead>
           <TableHead className="hidden lg:table-cell">GST</TableHead>
           <TableHead>Address</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -100,6 +112,12 @@ const OrganizationTable: React.FC<{ organizations: Organization[]; isLoading: bo
             <TableCell>
               <AddressDialog org={org} />
             </TableCell>
+            <TableCell className="space-x-2">
+              <Button variant="outline" size="sm" onClick={() => onEdit(org)} disabled={isDeleting}>Edit</Button>
+              <Button color="primary" size="sm" onClick={() => onAskDelete(org)} disabled={isDeleting}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -112,6 +130,10 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
   const { toast } = useToast();
   const [organizationsState, setOrganizationsState] = useState<Organization[]>([]);
   const [isLoadingState, setIsLoadingState] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
+  const [deleteOrg, setDeleteOrg] = useState<Organization | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchOrganizations = useCallback(async (): Promise<Organization[] | undefined> => {
     try {
@@ -142,6 +164,7 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
       
       if (json.success && Array.isArray(json.data)) {
         const formattedOrgs: Organization[] = json.data.map((org: any) => ({
+          id: org.id,
           name: org.name,
           status: org.isActive ? "active" : "inactive",
           phone: org.phone,
@@ -157,7 +180,7 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
       toast({
         title: "Error",
         description: "Failed to load organizations. Please try again.",
-        variant: "destructive",
+        className: "bg-red-500 text-white",
         duration: 5000,
       });
       return [];
@@ -182,6 +205,105 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
     loadOrganizations();
   }, [loadOrganizations]);
 
+  const handleSaveEdit = async () => {
+    if (!editingOrg) return;
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return toast({ title: "Auth error", description: "Not authenticated", className: "bg-red-500 text-white", duration: 5000 });
+      
+      const url = `${API_URL}/api/v1/organizations/${editingOrg.id}`;
+      const payload = {
+        name: editingOrg.name,
+        phone: editingOrg.phone,
+        email: editingOrg.email,
+        gstNumber: editingOrg.gstNumber === 'N/A' ? '' : editingOrg.gstNumber,
+        address: editingOrg.address,
+        isActive: editingOrg.status === 'active',
+      };
+      
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      toast({ title: 'Updated', description: 'Organization updated successfully', className: "bg-green-500 text-white", duration: 5000 });
+      setEditingOrg(null);
+      await loadOrganizations();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to update organization', className: "bg-red-500 text-white", duration: 5000 });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteOrg) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        return toast({ 
+          title: "Auth error", 
+          description: "Not authenticated", 
+          className: "bg-red-500 text-white", 
+          duration: 5000 
+        });
+      }
+
+      toast({
+        title: "Deleting...", 
+        description: "Fetching related data for this organization...", 
+        className: "bg-blue-500 text-white", 
+        duration: 2000 
+      });
+       
+      toast({
+        title: "Deleting...", 
+        description: "Deleting organization...", 
+        className: "bg-blue-500 text-white", 
+        duration: 2000 
+      });
+
+      const orgResponse = await fetch(`${API_URL}/api/v1/organizations/${deleteOrg.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!orgResponse.ok) {
+        throw new Error(`Failed to delete organization: HTTP ${orgResponse.status}`);
+      }
+
+      toast({ 
+        title: 'Success!', 
+        description: `Organization "${deleteOrg.name}" and all related data deleted successfully`, 
+        className: "bg-green-500 text-white", 
+        duration: 5000 
+      });
+      
+      setDeleteOrg(null);
+      await loadOrganizations();
+      
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      toast({ 
+        title: 'Error', 
+        description: err.message || 'Failed to delete organization and related data', 
+        className: "bg-red-500 text-white", 
+        duration: 5000 
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -190,11 +312,111 @@ const OrganizationOverview: React.FC<OrganizationOverviewProps> = () => {
             <Building2Icon className="h-5 w-5" />
             Organizations
           </CardTitle>
-          {/* ✅ Trigger a table refresh as soon as an org is added */}
-          <AddOrganizationDialog onAdded={loadOrganizations} />
+          
+          <div className="flex items-center gap-2">
+            <DownloadCSV 
+              endpoint="organizations"
+              disabled={isDownloading || !organizationsState?.length}
+              onDownloadStart={() => setIsDownloading(true)}
+              onDownloadComplete={() => setIsDownloading(false)}
+            />
+            <AddOrganizationDialog onAdded={loadOrganizations} />
+          </div>
         </div>
-        <OrganizationTable organizations={organizationsState} isLoading={isLoadingState} />
+        <OrganizationTable 
+          organizations={organizationsState} 
+          isLoading={isLoadingState} 
+          onEdit={(org) => setEditingOrg(org)}
+          onAskDelete={(org) => setDeleteOrg(org)}
+          isDeleting={isDeleting} 
+        />
       </div>
+
+      {/* Edit Organization Modal */}
+      <Dialog open={!!editingOrg} onOpenChange={() => setEditingOrg(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Edit Organization</DialogTitle>
+          </DialogHeader>
+          {editingOrg && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+              <div>
+                <Label className="mb-4 block">Name</Label>
+                <Input className="bg-gray-100" value={editingOrg.name} onChange={(e) => setEditingOrg({ ...editingOrg, name: e.target.value })} />
+              </div>
+              <div>
+                <Label className="mb-4 block">Phone</Label>
+                <Input className="bg-gray-100" value={editingOrg.phone} onChange={(e) => setEditingOrg({ ...editingOrg, phone: e.target.value })} />
+              </div>  
+              <div>
+                <Label className="mb-4 block">Email</Label>
+                <Input type="email" className="bg-gray-100" value={editingOrg.email} onChange={(e) => setEditingOrg({ ...editingOrg, email: e.target.value })} />
+              </div>
+              <div>
+                <Label className="mb-4 block">GST Number</Label>
+                <Input className="bg-gray-100" value={editingOrg.gstNumber === 'N/A' ? '' : editingOrg.gstNumber} onChange={(e) => setEditingOrg({ ...editingOrg, gstNumber: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <Label className="mb-4 block">Address</Label>
+                <Input className="bg-gray-100" value={editingOrg.address} onChange={(e) => setEditingOrg({ ...editingOrg, address: e.target.value })} />
+              </div>
+              <div>
+                <Label className="mb-4 block">Status</Label>
+                <Select value={editingOrg.status} onValueChange={(v) => setEditingOrg({ ...editingOrg, status: v })}>
+                  <SelectTrigger className="bg-gray-100">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setEditingOrg(null)}>Cancel</Button>
+            <Button onClick={handleSaveEdit}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal with enhanced messaging */}
+      <Dialog open={!!deleteOrg} onOpenChange={() => !isDeleting && setDeleteOrg(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p>Do you really want to delete <span className="font-semibold">{deleteOrg?.name}</span>?</p>
+            <p className="text-sm text-muted-foreground">
+              ⚠️ This will also delete all related users, jobs, and vehicles associated with this organization.
+            </p>
+            {isDeleting && (
+              <p className="text-sm text-blue-600 font-medium">
+                Please wait while we process the deletion...
+              </p>
+            )}
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="secondary" 
+              onClick={() => setDeleteOrg(null)}
+              disabled={isDeleting}
+            >
+              No
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

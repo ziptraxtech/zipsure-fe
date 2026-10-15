@@ -158,12 +158,17 @@ const Subscriptions = () => {
   }
 
   return (
+
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+      {/* Gradient overlay */}
+      <div 
+        className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_100%_0%,rgba(206, 122, 122, 0.15)_0%,rgba(255,255,255,0)_70%] pointer-events-none"
+        aria-hidden="true"
+      />
+
     <div className="p-6 space-y-6 items-center">
       <div>
-        <h1 className="text-4xl font-bold tracking-tight text-center">Subscription Plans</h1>
-        <p className="text-2xl text-muted-foreground text-center">
-          Choose the plan that fits your organization's needs
-        </p>
+        <h1 className="text-2xl lg:text-3xl font-bold mb-4">Subscription Plans</h1>
       </div>
 
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -187,14 +192,18 @@ const Subscriptions = () => {
               <CardContent>
                 <p className="text-muted-foreground mb-4">{plan.description}</p>
                 <div className="space-y-2 text-sm">
+                  {plan.maxVehicles > 0 && (
                   <div className="flex justify-between">
                     <span>Max Vehicles:</span>
                     <span className="font-medium">{plan.maxVehicles}</span>
                   </div>
+                  )}
+                  {plan.maxUsers > 0 && (
                   <div className="flex justify-between">
                     <span>Max Users:</span>
                     <span className="font-medium">{plan.maxUsers}</span>
                   </div>
+                  )}
                   <div className="flex justify-between">
                     <span>Billing Cycle:</span>
                     <span className="font-medium">
@@ -225,6 +234,7 @@ const Subscriptions = () => {
         onConfirm={handleConfirmSubscription}
         isLoading={isProcessing}
       />
+    </div>
     </div>
   );
 };

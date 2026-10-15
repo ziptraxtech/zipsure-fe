@@ -137,7 +137,6 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ open, onOpenChange }) =
             <Button 
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700"
             >
               {isSubmitting ? 'Updating...' : 'Update Password'}
             </Button>

@@ -29,8 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { 
   DollarSign,
-  Users, 
-  BarChart3, 
+  Users,
   Settings, 
   LogOut, 
   Shield, 
@@ -38,7 +37,12 @@ import {
   MapPin,
   ClipboardList,
   Home,
-  Truck
+  Battery,
+  QrCode,
+  PlugZap,
+  Map,
+  Car,
+  ClipboardCheck
 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
@@ -47,6 +51,12 @@ import SubscriptionPlans from '@/components/dashboard/forSuperadmin/Subscription
 import ChangePassword from '@/contexts/ChangePassword';
 import Jobs from '@/components/dashboard/forSuperadmin/Jobs';
 import RiderJobs from '@/components/dashboard/forRider/Jobs-rider';
+import NearbyChargers from '@/components/dashboard/forRider/chargers';
+import QRScannerPage from '@/components/dashboard/forRider/QRScannerPage';
+import Chargers from '@/components/dashboard/forSuperadmin/allChargers';
+import RidersMap from '@/components/dashboard/forAdmin/user-section/RidersMap';
+import AddVehicleCategory from '@/components/dashboard/forSuperadmin/addVehicleCategory';
+import BatteryAnalytics from '@/components/dashboard/forAdmin/batteryAnalytics';
 
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
@@ -73,7 +83,13 @@ type ActiveView =
   | 'tracking'
   | 'reports'
   | 'history'
-  | 'jobs-rider';
+  | 'jobs-rider'
+  | 'nearby chargers'
+  | 'qr-scanner'
+  | 'chargers'
+  | 'riders-map'
+  | 'vehicles'
+  | 'battery-analytics';
 
 interface NavigationItem {
   id: string;
@@ -86,7 +102,7 @@ interface NavigationItem {
 
 const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChange: (view: ActiveView) => void, orgRef: React.RefObject<HTMLDivElement>, onOpenChangePassword: () => void }) => {
   const { user, logout } = useAuth() as { user: User | null; logout: () => void };
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === 'collapsed';
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
 
@@ -105,6 +121,10 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
       : user?.name || "User";
 
   const handleNavigation = (view: ActiveView, scrollTo?: string) => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+
     if (scrollTo) {
       const element = document.getElementById(scrollTo);
       if (element) {
@@ -144,25 +164,33 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
           { id: 'organizations', label: 'Organizations', icon: Building2, url: '#', view: 'organizations', scrollTo: 'organizations-section' },
           { id: 'plans', label: 'Subscription Plans', icon: Shield, url: '/plans', view: 'plans' },
           { id: 'users', label: 'All Users', icon: Users, url: '#', view: 'users', scrollTo: 'users-section' },
-          { id: 'jobs', label: 'All Jobs', icon: Truck, url: '/jobs', view: 'jobs' }
+          { id: 'jobs', label: 'All Jobs', icon: ClipboardCheck, url: '/jobs', view: 'jobs' },
+          { id: 'chargers', label: 'Chargers', icon: PlugZap, url: '/chargers', view: 'chargers' },
+          { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' },
+          { id: 'vehicles', label: 'Vehicles', icon: Car, url: '/vehicles', view: 'vehicles' }
         ];
       
       case 'admin':
         return [
           ...baseItems,
           { id: 'subscriptions', label: 'Subscriptions', icon: DollarSign, url: '/subscriptions', view: 'subscriptions' },
-          { id: 'users', label: 'Team Members', icon: Users, url: '#', view: 'users', scrollTo: 'admin-users-section' }
+          { id: 'users', label: 'Team Members', icon: Users, url: '#', view: 'users', scrollTo: 'admin-users-section' },
+          { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' },
+          { id: 'battery-analytics', label: 'Battery Analytics', icon: Battery, url: '/battery-analytics', view: 'battery-analytics' }
         ];
       case 'allocator':
         return [
           ...baseItems,
-          { id: 'jobs', label: 'Job Allocation', icon: ClipboardList, url: '#', view: 'jobs', scrollTo: 'allocator-jobs-section' },
+          { id: 'jobs', label: 'Job Allocation', icon: ClipboardList, url: '#', view: 'users', scrollTo: 'allocator-jobs-section' },
+          { id: 'riders-map', label: 'Riders Map', icon: Map, url: '/riders-map', view: 'riders-map' }
         ];
       
       case 'rider':
         return [
           ...baseItems,
           { id: 'jobs', label: 'All Jobs', icon: ClipboardList, url: '/jobs-rider', view: 'jobs-rider' },
+          { id: 'nearby chargers', label: 'Map', icon: MapPin, url: '/Map', view: 'nearby chargers' },
+          { id: 'qr scanner', label: 'QR Scanner', icon: QrCode, url: '/qr-scanner', view: 'qr-scanner' },
         ];
       
       default:
@@ -212,9 +240,9 @@ const AppSidebar = ({ onViewChange, orgRef, onOpenChangePassword }: { onViewChan
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{fullName}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={getRoleBadgeVariant(user?.role)} className="text-xs">
-                    {user?.role || 'user'}
-                  </Badge>
+                <Badge variant={getRoleBadgeVariant(user?.role)} className="text-xs">
+                {user?.role === "allocator" ? "Fleet Manager" : (user?.role || "user")}
+                </Badge>
                 </div>
                 {user?.organizationName && (
                   <p className="text-xs text-muted-foreground truncate mt-1">
@@ -288,10 +316,8 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const { user } = useAuth() as { user: User | null };
 
-  // ✅ Ref for organizations section
   const orgRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Get initials
   const getUserInitials = (): string => {
     try {
       const stored = localStorage.getItem("user");
@@ -304,9 +330,9 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
           );
         }
       }
-    } catch {
-      // Ignore parsing errors
-    }
+    } 
+catch {
+   }
     if (user?.name) return user.name.substring(0, 2).toUpperCase();
     return "U";
   };
@@ -319,8 +345,20 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
         return <SubscriptionPlans />;
       case 'jobs':
         return <Jobs />;
-      case 'jobs-rider': // ✅ fixed view name
+      case 'jobs-rider': 
         return <RiderJobs />;
+      case 'nearby chargers':
+        return <NearbyChargers />;
+      case 'qr-scanner':
+        return <QRScannerPage />;
+      case 'chargers':
+        return <Chargers />;
+      case 'riders-map':
+        return <RidersMap />;
+      case 'vehicles':
+        return <AddVehicleCategory />;
+      case 'battery-analytics':
+        return <BatteryAnalytics />;
       case 'dashboard':
       default:
         return (
@@ -363,7 +401,7 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children 
           </header>
 
           {/* Main Content */}
-          <div className="flex-1 p-4 pt-0 overflow-y-auto">
+          <div className={`flex-1 p-4 pt-0 ${activeView === 'qr-scanner' || activeView === 'riders-map' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             {renderContent()}
           </div>
 

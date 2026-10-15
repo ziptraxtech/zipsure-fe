@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DownloadCSV } from "./downloadcsv";
 
 interface AllocatorLike {
   id?: string;
@@ -126,14 +127,29 @@ const Jobs: React.FC = () => {
   };
 
   return (
+
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+      {/* Gradient overlay */}
+      <div 
+        className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_100%_0%,rgba(206, 122, 122, 0.15)_0%,rgba(255,255,255,0)_70%] pointer-events-none"
+        aria-hidden="true"
+      />
+
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">All Jobs</h1>
       </div>
 
       <Card className="shadow-md border rounded-lg">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Jobs</CardTitle>
+          <div className="flex items-center gap-2">
+            <DownloadCSV 
+              endpoint="jobs" 
+              onDownloadStart={() => {}}
+              onDownloadComplete={() => {}}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Table className="text-xs md:text-sm">
@@ -170,6 +186,7 @@ const Jobs: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
+    </div>
     </div>
   );
 };

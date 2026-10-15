@@ -117,17 +117,29 @@ const JobsRider: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+      {/* Gradient overlay */}
+      <div 
+        className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_100%_0%,rgba(206,122,122,0.15)_0%,rgba(255,255,255,0)_70%] pointer-events-none"
+        aria-hidden="true"
+      />
+
+    <div className="space-y-6 p-4">
+      {/* Header - Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold">My All Jobs</h1>
+          
+        </div>
+      </div>
       <Card className="shadow-sm border rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">My All Jobs</CardTitle>
-        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead className="hidden md:table-cell">Description</TableHead>
                 <TableHead className="hidden md:table-cell">Pickup</TableHead>
                 <TableHead className="hidden lg:table-cell">Delivery</TableHead>
                 <TableHead>Status</TableHead>
@@ -138,7 +150,9 @@ const JobsRider: React.FC = () => {
               {jobs.length > 0 ? (
                 jobs.map((job) => (
                   <TableRow key={job.id} className="hover:bg-muted/40">
-                    <TableCell className="font-medium">{job.title || "—"}</TableCell>
+                    <TableCell className="font-medium whitespace-normal break-words max-w-[150px]" title={job.title || ""}>
+                      {job.title || "—"}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell whitespace-normal break-words max-w-[200px]">
                       {job.description || "—"}
                     </TableCell>
@@ -166,8 +180,8 @@ const JobsRider: React.FC = () => {
         </CardContent>
       </Card>
     </div>
+    </div>
   );
 };
 
-// ✅ Fixed default export name
 export default JobsRider;

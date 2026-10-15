@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -41,12 +41,46 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
     make: "",
     year: "",
     color: "",
+    vehicleCategoryId: "",
   });
-
+  const [categories, setCategories] = useState<any[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (open) {
+      const fetchCategories = async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) {
+            toast({
+              title: "Authentication Error",
+              description: "You are not authenticated.",
+              className: "bg-red-500 text-white",
+            });
+            return;
+          }
 
+          const res = await axios.get(`${API_URL}/api/v1/vehicle-categories`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          setCategories(res.data.data || []);
+        } catch (err: any) {
+          console.error("Error fetching categories:", err);
+          toast({
+            title: "Error",
+            description: "Failed to fetch vehicle categories.",
+            className: "bg-red-500 text-white",
+          });
+        }
+      };
+
+      fetchCategories();
+    }
+  }, [open]);
   const validateField = (name: string, value: string) => {
     let error = "";
     const currentYear = new Date().getFullYear();
@@ -178,13 +212,12 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
         payload,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      // ✅ pass the new vehicle back immediately
       onVehicleAdded(response.data.data);
 
       onClose();
@@ -195,6 +228,7 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
         make: "",
         year: "",
         color: "",
+        vehicleCategoryId: "",
       });
 
       toast({
@@ -368,6 +402,29 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
               <p className="text-red-500 text-xs mt-1">{errors.color}</p>
             )}
           </div>
+          <div>
+            <Label className="mb-4 block">Vehicle Category</Label>
+            <Select
+              value={formData.vehicleCategoryId}
+              onValueChange={(value) => {
+                setFormData((prev) => ({ ...prev, vehicleCategoryId: value }));
+              }}
+            >
+              <SelectTrigger className="bg-gray-100">
+                <SelectValue placeholder="Select Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {touched.vehicleCategory && errors.vehicleCategory && (
+              <p className="text-red-500 text-xs mt-1">{errors.vehicleCategory}</p>
+            )}
+          </div>
         </div>
 
         <DialogFooter className="mt-4 flex justify-end gap-2">
@@ -381,6 +438,7 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
                             make: "",
                             year: "",
                             color: "",
+                            vehicleCategoryId: "",
                           });
                           setErrors({});
                         }}

@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2 } from "lucide-react"; // delete icon
+import { Trash2} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DownloadCSV } from "./downloadcsv";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -76,6 +77,7 @@ const SubscriptionPlans: React.FC = () => {
   const [deletePlan, setDeletePlan] = useState<Plan | null>(null); // for delete confirmation
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState<boolean>(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
 
   const token = localStorage.getItem("token");
@@ -142,10 +144,24 @@ const SubscriptionPlans: React.FC = () => {
     fetchPayments();
   }, []);
 
+  const determinePlanType = (maxVehicles: number, maxUsers: number): string => {
+    if (maxVehicles === 0 && maxUsers > 0) {
+      return "user";
+    } else if (maxUsers === 0 && maxVehicles > 0) {
+      return "vehicle";
+    } else {
+      return "combo";
+    }
+  };
+
   const handleSavePlan = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const formData = new FormData(e.currentTarget);
+    const maxVehicles = Number(formData.get("maxVehicles"));
+    const maxUsers = Number(formData.get("maxUsers"));
+    const planType = determinePlanType(maxVehicles, maxUsers);
+
     const payload = {
       name: formData.get("name"),
       description: formData.get("description"),
@@ -154,6 +170,7 @@ const SubscriptionPlans: React.FC = () => {
       maxUsers: Number(formData.get("maxUsers")),
       durationDays: Number(formData.get("durationDays")),
       isActive: true,
+      planType: planType,
     };
 
     try {
@@ -240,6 +257,14 @@ const SubscriptionPlans: React.FC = () => {
   };
 
   return (
+
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+      {/* Gradient overlay */}
+      <div 
+        className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_100%_0%,rgba(206, 122, 122, 0.15)_0%,rgba(255,255,255,0)_70%] pointer-events-none"
+        aria-hidden="true"
+      />
+
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Manage Subscription Plans</h1>
@@ -249,7 +274,7 @@ const SubscriptionPlans: React.FC = () => {
             setOpen(true);
           }}
         >
-          + Add New Plan
+          + Add Plan
         </Button>
       </div>
 
@@ -265,8 +290,8 @@ const SubscriptionPlans: React.FC = () => {
               <CardContent>
                 <p>{plan.description}</p>
                 <p className="text-lg font-bold mt-2">₹{plan.price}/mo</p>
-                <p>Max Vehicles: {plan.maxVehicles}</p>
-                <p>Max Users: {plan.maxUsers}</p>
+                {plan.maxVehicles > 0 && <p>Max Vehicles: {plan.maxVehicles}</p>}
+                {plan.maxUsers > 0 && <p>Max Users: {plan.maxUsers}</p>}
                 <p>Billing: {plan.durationDays} days</p>
 
                 <div className="flex items-center gap-2 mt-3">
@@ -294,9 +319,19 @@ const SubscriptionPlans: React.FC = () => {
       )}
 
       {/* Payments Table */}
-      <Card className="">
-        <CardHeader>
-          <CardTitle>Payments</CardTitle>
+      <Card className="shadow-sm border rounded-lg">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <span>Payments</span>
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <DownloadCSV 
+              endpoint="payments"
+              disabled={isDownloading || payments.length === 0}
+              onDownloadStart={() => setIsDownloading(true)}
+              onDownloadComplete={() => setIsDownloading(false)}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {paymentsLoading ? (
@@ -312,6 +347,7 @@ const SubscriptionPlans: React.FC = () => {
                   <TableHead>Amount</TableHead>
                   <TableHead className="hidden md:table-cell">Paid At</TableHead>
                   <TableHead className="hidden lg:table-cell">Razorpay Order ID</TableHead>
+                  <TableHead className="hidden lg:table-cell">Razorpay Payment ID</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -319,15 +355,38 @@ const SubscriptionPlans: React.FC = () => {
                   const orgName = p.subscription?.organization?.name || "-";
                   const paidAt = p.paidAt
                     ? new Date(p.paidAt).toLocaleString()
-                    : "-";
+                    : <span className="inline-flex items-center justify-center rounded-full border-red-500 border px-2.5 py-0.5 text-red-700">
+                        <span className="whitespace-nowrap text-sm">Not Paid Yet</span>
+                      </span>;
                   const amount = `${p.currency} ${p.amount}`;
+                  const paymentStatus = p.status === 'completed' 
+                    ? <span className="inline-flex items-center justify-center rounded-full border-green-500 border px-2.5 py-0.5 text-green-700">
+                        <span className="whitespace-nowrap text-sm">Completed</span>
+                      </span>
+                    : p.status === 'pending'
+                    ? <span className="inline-flex items-center justify-center rounded-full border-amber-500 border px-2.5 py-0.5 text-amber-700">
+                        <span className="whitespace-nowrap text-sm">Pending</span>
+                      </span>
+                    : p.status === 'failed'
+                    ? <span className="inline-flex items-center justify-center rounded-full border-red-500 border px-2.5 py-0.5 text-red-700">
+                        <span className="whitespace-nowrap text-sm">Failed</span>
+                      </span>
+                    : <span className="inline-flex items-center justify-center rounded-full border-gray-500 border px-2.5 py-0.5 text-gray-700">
+                        <span className="whitespace-nowrap text-sm">Refunded</span>
+                      </span>;
                   return (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium whitespace-normal break-words max-w-[180px] md:max-w-none">{orgName}</TableCell>
-                      <TableCell className="capitalize whitespace-normal break-words">{p.status}</TableCell>
+                      <TableCell className="whitespace-normal break-words">{paymentStatus}</TableCell>
                       <TableCell className="whitespace-normal break-words">{amount}</TableCell>
                       <TableCell className="hidden md:table-cell whitespace-normal break-words">{paidAt}</TableCell>
                       <TableCell className="hidden lg:table-cell whitespace-normal break-all">{p.razorpayOrderId || "-"}</TableCell>
+                      <TableCell className="hidden lg:table-cell whitespace-normal break-all">
+                        {p.razorpayPaymentId || 
+                          <span className="inline-flex items-center justify-center rounded-full border-red-500 border px-2.5 py-0.5 text-red-700">
+                            <span className="whitespace-nowrap text-sm">Not Paid Yet</span>
+                          </span>}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -420,7 +479,6 @@ const SubscriptionPlans: React.FC = () => {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  // Reset form fields
                   const form = document.getElementById('plan-form') as HTMLFormElement;
                   if (form) {
                     form.reset();
@@ -458,6 +516,7 @@ const SubscriptionPlans: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 };
